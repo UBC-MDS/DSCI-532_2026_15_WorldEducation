@@ -14,3 +14,7 @@ dependencies:
   - nbformat
   - shiny
   - pycountry
+  - shinywidgets
+  - anywidget
+  - ipyleaflet
+  - geopandas
