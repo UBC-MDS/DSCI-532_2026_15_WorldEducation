@@ -1,15 +1,17 @@
 import pandas as pd
 from shiny import App, ui, render, reactive
 from shinywidgets import render_widget, output_widget
-from pathlib import Path # for data reading
+import pycountry # for map using choropleth
+#from pathlib import Path # for data reading
 from matplotlib import pyplot as plt 
 import plotly.express as px # for creating world map
 from ipyleaflet import Map
 import geopandas as gpd
 
 # Load data
-data_path = Path(__file__).resolve().parent.parent / "data" / "raw" / "Global_education.csv"
-df = pd.read_csv(data_path, encoding="latin-1")
+#data_path = Path(__file__).resolve().parent.parent / "data" / "raw" / "Global_education.csv"
+#df = pd.read_csv(data_path, encoding="latin-1")
+df = pd.read_csv('./data/raw/Global_Education.csv', encoding='latin-1')
 
 region_map = {
     # Africa
@@ -105,6 +107,19 @@ region_map = {
         "Cook Islands": "Oceania", "Federated States of Micronesia": "Oceania",
         "Niue": "Oceania", "Tokelau": "Oceania",
     }
+
+
+def get_iso3(name):
+    try:
+        return pycountry.countries.lookup(name).alpha_3
+    except:
+        try:
+            return pycountry.countries.search_fuzzy(name)[0].alpha_3
+        except:
+            return None
+
+df["iso3"] = df["Countries and areas"].apply(get_iso3)
+df = df.dropna(subset=["iso3"])
 
 df["Region"] = df["Countries and areas"].map(region_map).fillna("Other")
 df = df[df["Region"] != "Other"] # Remove other region
@@ -226,20 +241,42 @@ def server(input, output, session):
         d = filtered_df()
         col = input.var()
 
-        fig = px.scatter_geo(
-            d,
-            lat="Latitude",
-            lon="Longitude",
+        # map version using ipyleaflet
+        # fig = px.scatter_geo(
+        #     d,
+        #     lat="Latitude",
+        #     lon="Longitude",
+        #     hover_name="Countries and areas",
+        #     color=col,
+        #     color_continuous_scale="Viridis",
+        #     projection="natural earth",
+        #     size_max=10
+        # )
+
+        # fig.update_layout(
+        #     title=f"World Map — {col}",
+        #     margin=dict(l=0, r=0, t=30, b=0)
+        # )
+
+        # map version from EDA
+        fig = px.choropleth(
+            d, 
+            locations="iso3", 
             hover_name="Countries and areas",
             color=col,
             color_continuous_scale="Viridis",
-            projection="natural earth",
-            size_max=10
+            #range_color=(0,10),
+            projection="natural earth"
+        )
+
+        fig.update_geos(
+            showcoastlines=True,
+            showcountries=True,
+            showframe=False
         )
 
         fig.update_layout(
-            title=f"World Map — {col}",
-            margin=dict(l=0, r=0, t=30, b=0)
+            margin=dict(l=0, r=0, t=30, b=0) 
         )
 
         return fig
