@@ -1,22 +1,17 @@
----
-title: "m1_proposal"
-output: html_document
----
-
 ## Section 1: Motivation and Purpose
 
-> **Our role:** Data scientist for a non-profit organization
->
-> **Target audience:** Researchers, educators, and policy makers
->
-> **Problem & Solution**:
->
-> Different countries across the world have diverse education systems. If we could understand which factors lead to higher standards of education systems, they can be used by the researchers, educators, and policymakers to assess and improve education systems globally. To address this challenge, we propose building a dashboard where we can utilize this Kaggle dataset from UNESCO Institute for Statistics, UNICEF, and UN Statistics Division and visualize different features in order to obtain insights into education on a global scale. Our app will show distributions of different features on a world map in a heat map form and relationships between features using histograms, scatterplots, and bar charts. Users will be able to explore different features by filtering and re-ordering on different variables to do exploratory data analysis and see if any factors in particular contribute to different education systems across the world.
+**Our role:** Data scientist for a non-profit organization
+
+**Target audience:** Researchers, educators, and policy makers
+
+**Problem & Solution**:
+
+Different countries across the world have diverse education systems. If we could understand which factors lead to higher standards of education systems, they can be used by the researchers, educators, and policymakers to assess and improve education systems globally. To address this challenge, we propose building a dashboard where we can utilize this Kaggle dataset from UNESCO Institute for Statistics, UNICEF, and UN Statistics Division and visualize different features in order to obtain insights into education on a global scale. Our app will show distributions of different features on a world map in a heat map form and relationships between features using histograms, scatterplots, and bar charts. Users will be able to explore different features by filtering and re-ordering on different variables to do exploratory data analysis and see if any factors in particular contribute to different education systems across the world.
 
 ## Section 2: Description of the Data
 
-> We will be visualizing a dataset of 202 countries. Each country has 29 variables that describe characteristics such as out-of-school rates, completion rates, proficiency levels, literacy rates, birth rates, and enrollment figures in primary and tertiary education. Some of the features have separate data for male and female too. The detailed description can be found below.
->
+We will be visualizing a dataset of 202 countries. Each country has 29 variables that describe characteristics such as out-of-school rates, completion rates, proficiency levels, literacy rates, birth rates, and enrollment figures in primary and tertiary education. Some of the features have separate data for male and female too. The detailed description can be found below.
+
 > 1.  **Countries and Areas**: Name of the countries and areas.
 >
 > 2.  **Latitude**: Latitude coordinates of the geographical location.
@@ -73,57 +68,57 @@ output: html_document
 >
 > 28. **Gross_Tertiary_Education_Enrollment**: Gross enrollment in tertiary education.
 >
-> 29. **Unemployment_Rate**: Unemployment rate in the respective countries/areas.
->
-> Using this data allows us to analyze and comprehend the dynamic nature of education systems worldwide. We can also compare and analyze if there are any trends or disparities between different countries, different continents, different genders, etc. to gain insights into education on a global scale.
+> 29. **Unemployment_Rate**: Unemployment rate in the respective countries/areas
+
+Using this data allows us to analyze and comprehend the dynamic nature of education systems worldwide. We can also compare and analyze if there are any trends or disparities between different countries, different continents, different genders, etc. to gain insights into education on a global scale.
 
 ## Section 3: Research Questions & Usage Scenarios
 
 ### Usage Scenario
 
-> Jessica is a policy maker at the Ministry of Education and she has to come up with new policies to further improve education systems on a national scale. She frequently collaborates with researchers and international organizations and has to justify policy decisions using data. However, she is often overwhelmed by the amount of data across countries.
->
-> In order to do that, she first needs to understand what factors contribute to better education systems globally. She wants to explore a World education dataset to compare the effects of different variables and identify which of these variables affect education systems across the world the most and better create policies with the focus on these variables.
->
-> When Jessica logs on to our "World Education app", she will see an overview of all the available variables in the dataset, categorized by education level, gender, and socioeconomic factors. Then, she can select one of these variables such as out-of-school rates for lower secondary education to display on a global heat map and identify regions with particularly high rates.
->
-> Next, she compares this variable with other variables such as completion rates and youth literacy rates by using scatter plots and sees if there are any strong correlations between them. If she is interested in certain countries/ regions, she can filter data points to be those from countries of interest for more detailed analysis.
->
-> She can also compare the gender effects on several variables as well. For some regions where gender plays an important role in education, dropout rates might be higher for female students. By comparing these trends with birth rates and unemployment rates, she gains insight into how demographic and economic pressures may influence educational participation.
->
-> Based on her findings from using our app, Jessica hypothesizes that secondary completion rates, gender gaps, and youth literacy are strongly correlated with successful education systems across the world. These insights allow her to make data-driven policies such as policies to encourage students to stay in school or policies to help bridge gender gaps.
+Jessica is a policy maker at the Ministry of Education and she has to come up with new policies to further improve education systems on a national scale. She frequently collaborates with researchers and international organizations and has to justify policy decisions using data. However, she is often overwhelmed by the amount of data across countries.
+
+In order to do that, she first needs to understand what factors contribute to better education systems globally. She wants to explore a World education dataset to compare the effects of different variables and identify which of these variables affect education systems across the world the most and better create policies with the focus on these variables.
+
+When Jessica logs on to our "World Education app", she will see an overview of all the available variables in the dataset, categorized by education level, gender, and socioeconomic factors. Then, she can select one of these variables such as out-of-school rates for lower secondary education to display on a global heat map and identify regions with particularly high rates.
+
+Next, she compares this variable with other variables such as completion rates and youth literacy rates by using scatter plots and sees if there are any strong correlations between them. If she is interested in certain countries/ regions, she can filter data points to be those from countries of interest for more detailed analysis.
+
+She can also compare the gender effects on several variables as well. For some regions where gender plays an important role in education, dropout rates might be higher for female students. By comparing these trends with birth rates and unemployment rates, she gains insight into how demographic and economic pressures may influence educational participation.
+
+Based on her findings from using our app, Jessica hypothesizes that secondary completion rates, gender gaps, and youth literacy are strongly correlated with successful education systems across the world. These insights allow her to make data-driven policies such as policies to encourage students to stay in school or policies to help bridge gender gaps.
 
 ### User Stories
 
-> **User Story 1:** As a **policy maker**, I want to filter and compare education indicators across countries and regions to identify geographic disparities in education outcomes.
->
-> **User Story 2:** As a **policy maker**, I want to analyze education indicators by gender to determine whether male and female students experience unequal access to education systems.
->
-> **User Story 3:** As a policy maker, I want to visualize education indicators on a world map and through comparative charts in order to quickly identify global patterns, trends, and outliers.
+**User Story 1:** As a **policy maker**, I want to filter and compare education indicators across countries and regions to identify geographic disparities in education outcomes.
+
+**User Story 2:** As a **policy maker**, I want to analyze education indicators by gender to determine whether male and female students experience unequal access to education systems.
+
+**User Story 3:** As a policy maker, I want to visualize education indicators on a world map and through comparative charts in order to quickly identify global patterns, trends, and outliers.
 
 ### Jobs to Be Done
 
-> **JTBD 1:**
->
-> **Situation:** When I am evaluating the overall performance of education systems across countries,
->
-> **Motivation:** I want to compare key education indicators such as completion rates and literacy rates across regions,
->
-> **Outcome:** so I can identify which regions are lagging behind and require targeted policy attention.
->
-> **JTBD 2:** **Situation:** When designing policies to bridge gender inequality in education,
->
-> **Motivation:** I want to compare different education variables separately for male and female students across different education levels
->
-> **Outcome:** so I can identify gender-based disparities and design policies that promote equal access to education.
->
-> **JTBD 3:**
->
-> **Situation:** When I am reviewing large-scale global education data,
->
-> **Motivation:** I want to visualize education indicators on a global heat map,
->
-> **Outcome:** so I can quickly detect global patterns, trends, and outlier countries that require further investigation or policy intervention.
+**JTBD 1:**
+
+**Situation:** When I am evaluating the overall performance of education systems across countries,
+
+**Motivation:** I want to compare key education indicators such as completion rates and literacy rates across regions,
+
+**Outcome:** so I can identify which regions are lagging behind and require targeted policy attention.
+
+**JTBD 2:** **Situation:** When designing policies to bridge gender inequality in education,
+
+**Motivation:** I want to compare different education variables separately for male and female students across different education levels
+
+**Outcome:** so I can identify gender-based disparities and design policies that promote equal access to education.
+
+**JTBD 3:**
+
+**Situation:** When I am reviewing large-scale global education data,
+
+**Motivation:** I want to visualize education indicators on a global heat map,
+
+**Outcome:** so I can quickly detect global patterns, trends, and outlier countries that require further investigation or policy intervention.
 
 ## Section 4: Exploratory Data Analysis
 
