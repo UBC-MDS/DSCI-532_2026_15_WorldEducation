@@ -1,4 +1,6 @@
 from shiny import App, ui, render, reactive
+from shinywidgets import output_widget, render_widget
+
 # libraries for data processing
 import pandas as pd
 import numpy as np
@@ -224,7 +226,7 @@ app_ui = ui.page_fluid(
         ui.layout_column_wrap(
             ui.card(
                 ui.card_header("Global Education Indicators Map"),
-                ui.output_ui("debug_map_info"),
+                output_widget("world_map")
             ),
             ui.layout_column_wrap(
                 ui.card(
@@ -232,8 +234,8 @@ app_ui = ui.page_fluid(
                     ui.div("Plots will be displayed here"),
                 ),
                 ui.card(
-                    ui.card_header("Country Data"),
-                    ui.output_table("debug_table"),
+                    ui.card_header("Filtered Data"),
+                    ui.output_table("output_tbl"),
                 ),
                 width=1/2,
             ),
@@ -308,26 +310,41 @@ def server(input, output, session):
     
         return d
 
-    # --- Debug outputs so you can confirm it works ---
     @output
-    @render.ui
-    def debug_map_info():
-        metric = input.input_map_metric()
+    @render_widget
+    def world_map():
         d = filtered_df()
-        return ui.div(
-            ui.p(f"Rows after filters: {len(d)}"),
-            ui.p(f"Selected metric column: {metric}"),
-            ui.p(f"Missing values in metric: {d[metric].isna().sum() if metric in d.columns else 'N/A'}"),
+        metric = input.input_map_metric()
+        fig = px.choropleth(
+            d, 
+            locations="iso3", 
+            hover_name="Countries and areas",
+            color=metric,
+            color_continuous_scale="viridis",
+            projection="natural earth"
         )
+
+        fig.update_geos(
+            showcoastlines=True,
+            showcountries=True,
+            showframe=False
+        )
+
+        fig.update_layout(
+            margin=dict(l=0, r=0, t=30, b=0) 
+        )
+
+        return fig
 
     @output
     @render.table
-    def debug_table():
+    def output_tbl():
         d = filtered_df()
         # show a few cols including the selected metric
         metric = input.input_map_metric()
         cols = ["Countries and areas", "Region", "iso3", metric]
         cols = [c for c in cols if c in d.columns]
-        return d[cols].head(10)
+        return d[cols]
+        
 
 app = App(app_ui, server)
