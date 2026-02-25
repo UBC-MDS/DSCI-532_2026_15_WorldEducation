@@ -1,5 +1,6 @@
 import pandas as pd
 from shiny import App, ui, render, reactive
+from shiny.ui import update_selectize
 from shinywidgets import render_widget, output_widget
 import pycountry # for map using choropleth
 #from pathlib import Path # for data reading
@@ -11,7 +12,7 @@ import geopandas as gpd
 # Load data
 #data_path = Path(__file__).resolve().parent.parent / "data" / "raw" / "Global_education.csv"
 #df = pd.read_csv(data_path, encoding="latin-1")
-df = pd.read_csv('./data/raw/Global_Education.csv', encoding='latin-1')
+df = pd.read_csv('./data/raw/Global_Education.csv', encoding='unicode_escape')
 
 region_map = {
     # Africa
@@ -136,13 +137,30 @@ numeric_cols = [
     "Unemployment_Rate"
 ]
 
+# Theme-aware header — bg-primary adapts to any ui.Theme preset
+header = ui.div(
+    ui.div(
+        ui.h1("Cars Explorer", class_="mb-0 fs-3"),
+        ui.p("Fuel economy dataset · 1970–1982", class_="mb-0 opacity-75 small"),
+    ),
+    ui.tags.span("v1.0", class_="badge bg-light text-dark"),
+    class_="bg-primary text-white p-4 d-flex justify-content-between align-items-center",
+)
+
+# Shiny layout
+
 app_ui = ui.page_fluid(
+    header,
     ui.h2("World Education Dashboard"),
     ui.layout_sidebar(
         # Left sidebar with filters
         ui.sidebar(
             ui.card(
                 ui.card_header("Filters"),
+                ui.input_action_button(
+                    "reset_all", 
+                    "Reset all filters"
+                ),
                 ui.input_select(
                     "region",
                     "Select Region:",
@@ -216,6 +234,8 @@ app_ui = ui.page_fluid(
     )
 )
 
+# Shiny Server Section
+
 def server(input, output, session):
     # Add your server logic here
     @reactive.Calc
@@ -233,6 +253,30 @@ def server(input, output, session):
         d = d[(d["Birth_Rate"] >= br_min) & (d["Birth_Rate"] <= br_max)]
 
         return d
+
+    @reactive.Effect
+    def _update_country_choices():
+        region = input.region()
+
+        if region == "All":
+            choices = sorted(df["Countries and areas"].unique())
+        else:
+            choices = sorted(df[df["Region"] == region]["Countries and areas"].unique())
+
+        update_selectize(
+            "country",
+            choices=choices,
+            )
+
+    @reactive.effect
+    @reactive.event(input.reset_all)
+    def _reset_filters():
+        ui.update_select("origin", selected="All")
+        ui.update_slider("mpg", value=0)
+        ui.update_checkbox_group("cols", selected=["Name", "MPG", "HP"])
+        ui.update_numeric("n_rows", value=10)
+        ui.update_switch("log_scale", value=False)
+        ui.update_radio_buttons("chart_type", selected="scatter")
 
 
     @output
