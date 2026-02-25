@@ -69,11 +69,17 @@ Example:
 ```` markdown
 ```mermaid
 flowchart TD
-  A[/input_year/] --> F{{filtered_df}}
-  B[/input_region/] --> F
-  F --> P1([plot_trend])
-  F --> P2([tbl_summary])
-  C[/input_color/] --> P3([plot_scatter])
+    A[input_region] --> B{{filtered_df}}
+    C[input_map_metric] --> H([output_world_map])
+    A --> H
+    D[input_completion_levels] --> F{{regional_summary}}
+    E{{processed_df}} --> B
+    B --> F
+    E --> H
+    F --> G([output_insight_card])
+    F --> I([output_completion_chart])
+    B --> J([output_literacy_scatter])
+    B --> K([output_tbl])
 ```
 ````
 
@@ -87,4 +93,6 @@ For each `@reactive.calc` in your diagram, briefly describe:
 -   What transformation it performs (e.g., "filters rows to the selected year range and region(s)").
 -   Which outputs consume it.
 
-------------------------------------------------------------------------
+1.  processed_df
+2.  filtered_df
+3.  regional_summary
