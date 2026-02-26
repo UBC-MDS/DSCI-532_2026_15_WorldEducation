@@ -1,5 +1,5 @@
 from shiny import App, ui, render, reactive
-from shinywidgets import output_widget, render_widget
+from shinywidgets import output_widget, render_widget, render_plotly
 from shiny.ui import update_selectize
 
 # libraries for data processing
@@ -240,10 +240,20 @@ app_ui = ui.page_fluid(
                     ui.div("Plots will be displayed here"),
                 ),
                 ui.card(
-                    ui.card_header("Filtered Data"),
-                    ui.output_table("output_tbl"),
+                    ui.card_header("Bar plot"),
+                    #ui.output_plot("bar"),
+                    ui.div("Plots will be displayed here"),
                 ),
-                width=1/2,
+                ui.card(
+                    ui.card_header("Literacy Scatterplot"),
+                    output_widget("scatterplot"),
+                    full_screen=True,
+                ),
+                ui.card(
+                    ui.card_header("Data Table"),
+                    ui.output_data_frame("tbl"),
+                ),
+                width=1/4,
             ),
             width=1,
             heights_equal="row",
@@ -306,7 +316,7 @@ def server(input, output, session):
 
     # 2) Apply filters (triggered by button)
     @reactive.Calc
-    @reactive.event(input.apply_filters)
+    @reactive.event(input.apply_filters, ignore_none=False)
     def filtered_df():
         d = processed_df()
     
@@ -341,6 +351,30 @@ def server(input, output, session):
         )
 
         return fig
+    
+    @render_plotly
+    def scatterplot():
+        d = filtered_df()
+        return px.scatter(
+            d,
+            x="Youth_15_24_Literacy_Rate_Male",
+            y="Youth_15_24_Literacy_Rate_Female",
+            #trendline="lowess"
+        )
+    
+    @output
+    @render.data_frame
+    def tbl():
+        d = filtered_df()
+        metric = input.input_map_metric()
+        cols = ["Countries and areas", "Region", "iso3", metric]
+        cols = [c for c in cols if c in d.columns]
+
+        return render.DataGrid(
+            d[cols],
+            selection_mode="rows",
+            height="300px"
+        )
 
     @output
     @render.table
