@@ -362,6 +362,7 @@ def server(input, output, session):
             hover_name="Countries and areas",
             color_discrete_sequence=px.colors.qualitative.Set2,
             trendline="ols",
+            trendline_scope="overall",
             labels={
                 "Region": "Region",
                 "Youth_15_24_Literacy_Rate_Male": "Literacy Rate (Male)",
