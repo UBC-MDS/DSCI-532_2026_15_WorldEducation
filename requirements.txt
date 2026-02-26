@@ -10,5 +10,3 @@ nbformat==5.10.4
 pycountry==24.6.1
 shinywidgets==0.7.1
 anywidget==0.9.21
-ipyleaflet==0.20.0
-geopandas==1.1.2

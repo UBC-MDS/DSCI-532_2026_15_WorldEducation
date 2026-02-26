@@ -16,5 +16,3 @@ dependencies:
   - pycountry
   - shinywidgets
   - anywidget
-  - ipyleaflet
-  - geopandas
