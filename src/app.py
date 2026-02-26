@@ -350,26 +350,36 @@ def server(input, output, session):
 
         return fig
     
+
+    @output
     @render_plotly
     def scatterplot():
         d = filtered_df()
-        
-        return px.scatter(
+
+        fig = px.scatter(
             d,
             x="Youth_15_24_Literacy_Rate_Male",
             y="Youth_15_24_Literacy_Rate_Female",
             color="Region",
             hover_name="Countries and areas",
             color_discrete_sequence=px.colors.qualitative.Set2,
-            trendline="ols",
-            trendline_scope="overall",
             labels={
                 "Region": "Region",
                 "Youth_15_24_Literacy_Rate_Male": "Literacy Rate (Male)",
                 "Youth_15_24_Literacy_Rate_Female": "Literacy Rate (Female)",
             }
         )
-    
+
+        # Add 45-degree diagonal line (y = x)
+        fig.add_shape(
+            type="line",
+            x0=0, y0=0,
+            x1=100, y1=100,
+            line=dict(color="black", dash="dash")
+        )
+
+        return fig
+
     @output
     @render.data_frame
     def tbl():
