@@ -1,19 +1,73 @@
-import pandas as pd
 from shiny import App, ui, render, reactive
+from shinywidgets import output_widget, render_widget
 from shiny.ui import update_selectize
-from shinywidgets import render_widget, output_widget
-import pycountry # for map using choropleth
-#from pathlib import Path # for data reading
-from matplotlib import pyplot as plt 
-import plotly.express as px # for creating world map
+
+# libraries for data processing
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+
+# libraries for visualization
+import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
+import plotly.express as px
+import seaborn as sns
+import scienceplots
+import pycountry
 from ipyleaflet import Map
 import geopandas as gpd
 
 # Load data
 #data_path = Path(__file__).resolve().parent.parent / "data" / "raw" / "Global_education.csv"
 #df = pd.read_csv(data_path, encoding="latin-1")
-df = pd.read_csv('./data/raw/Global_Education.csv', encoding='unicode_escape')
+df = pd.read_csv('data/raw/Global_Education.csv', encoding='latin-1')
 
+# Fix country naming inconsistencies
+FIXES = {
+    "The Bahamas": "Bahamas",
+    "The Gambia": "Gambia",
+    "Republic of the Congo": "Congo",
+    "Democratic Republic of the Congo": "Congo, The Democratic Republic of the",
+    "Ivory Coast": "Côte d'Ivoire",
+    "Republic of Ireland": "Ireland",
+    "East Timor": "Timor-Leste",
+    "Federated States of Micronesia": "Micronesia, Federated States of",
+    "Russia": "Russian Federation",
+    "Iran": "Iran, Islamic Republic of",
+    "Laos": "Lao People's Democratic Republic",
+    "South Korea": "Korea, Republic of",
+    "North Korea": "Korea, Democratic People's Republic of",
+    "Vatican City": "Holy See (Vatican City State)",
+    "Cape Verde": "Cabo Verde",
+    "Palestinian National Authority": "Palestine, State of",
+    "Moldova": "Moldova, Republic of",
+    "Syria": "Syrian Arab Republic",
+    "Tanzania": "Tanzania, United Republic of",
+    "Venezuela": "Venezuela, Bolivarian Republic of",
+    "Bolivia": "Bolivia, Plurinational State of",
+    "Vietnam": "Viet Nam",
+    "Guinea0Bissau": "Guinea-Bissau",
+    "Sï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿": "São Tomé and Príncipe",
+    "Turkey": "Türkiye"
+}
+
+# Get iso3 for plotting
+def to_iso3(name):
+    if pd.isna(name):
+        return None
+    
+    name = str(name).strip()
+    name = FIXES.get(name, name)
+
+    try:
+        return pycountry.countries.lookup(name).alpha_3
+    except:
+        try:
+            return pycountry.countries.search_fuzzy(name)[0].alpha_3
+        except:
+            return None
+
+# Map countries to continents
 region_map = {
     # Africa
         "Algeria": "Africa", "Angola": "Africa", "Benin": "Africa", "Botswana": "Africa",
@@ -109,207 +163,170 @@ region_map = {
         "Niue": "Oceania", "Tokelau": "Oceania",
     }
 
-
-def get_iso3(name):
-    try:
-        return pycountry.countries.lookup(name).alpha_3
-    except:
-        try:
-            return pycountry.countries.search_fuzzy(name)[0].alpha_3
-        except:
-            return None
-
-df["iso3"] = df["Countries and areas"].apply(get_iso3)
-df = df.dropna(subset=["iso3"])
-
-df["Region"] = df["Countries and areas"].map(region_map).fillna("Other")
-df = df[df["Region"] != "Other"] # Remove other region
-df.columns = df.columns.str.strip()
-
-# Numeric columns for plots
-numeric_cols = [ 
-    "Completion_Rate_Primary_Male", 
-    "Completion_Rate_Primary_Female", 
-    "Completion_Rate_Lower_Secondary_Male", 
-    "Completion_Rate_Lower_Secondary_Female", 
-    "Birth_Rate", 
-    "Gross_Primary_Education_Enrollment", 
-    "Unemployment_Rate"
-]
-
-# Theme-aware header — bg-primary adapts to any ui.Theme preset
-header = ui.div(
-    ui.div(
-        ui.h1("Cars Explorer", class_="mb-0 fs-3"),
-        ui.p("Fuel economy dataset · 1970–1982", class_="mb-0 opacity-75 small"),
-    ),
-    ui.tags.span("v1.0", class_="badge bg-light text-dark"),
-    class_="bg-primary text-white p-4 d-flex justify-content-between align-items-center",
-)
-
-# Shiny layout
-
 app_ui = ui.page_fluid(
-    header,
     ui.h2("World Education Dashboard"),
     ui.layout_sidebar(
-        # Left sidebar with filters
         ui.sidebar(
             ui.card(
                 ui.card_header("Filters"),
-                ui.input_action_button(
-                    "reset_all", 
-                    "Reset all filters"
-                ),
-                ui.input_select(
-                    "region",
-                    "Select Region:",
-                    choices=["All"] + sorted(df["Region"].unique())
-                ),
                 ui.input_selectize(
-                    "country",
-                    "Select Country:",
-                    choices=sorted(df["Countries and areas"].unique()),
-                    multiple=True
+                    "input_region",
+                    "Select Region:",
+                    choices=["North America", "South America", "Europe", "Asia", "Africa", "Oceania"],
+                    multiple=True,
                 ),
                 ui.input_select(
-                    "education_level",
-                    "Education Level:",
-                    choices=["Primary", "Lower Secondary", "Upper Secondary"]
-                ),
-                ui.input_select(
-                    "var",
-                    "Select Variable for Histogram:",
-                    choices=numeric_cols
-                ),
-                ui.input_slider(
-                    "birth_rate_range",
-                    "Birth Rate Range:",
-                    min=int(df["Birth_Rate"].min()),
-                    max=int(df["Birth_Rate"].max()),
-                    value=[int(df["Birth_Rate"].min()), int(df["Birth_Rate"].max())]
+                    "input_map_metric",
+                    "Map metric",
+                    {
+                        "Access": {
+                            "OOSR_Avg_Primary": "Out-of-school rate (Primary, avg)",
+                            "OOSR_Avg_Lower_Secondary": "Out-of-school rate (Lower secondary, avg)",
+                            "OOSR_Avg_Upper_Secondary": "Out-of-school rate (Upper secondary, avg)",
+                            "OOSR_Gap_Primary": "Out-of-school rate gender gap (Primary)",
+                            "OOSR_Gap_Lower_Secondary": "Out-of-school rate gender gap (Lower secondary)",
+                            "OOSR_Gap_Upper_Secondary": "Out-of-school rate gender gap (Upper secondary)",
+                            "Gross_Primary_Education_Enrollment": "Gross primary enrollment",
+                            "Gross_Tertiary_Education_Enrollment": "Gross tertiary enrollment",
+                        },
+                        "Completion": {
+                            "Completion_Avg_Primary": "Completion rate (Primary, avg)",
+                            "Completion_Avg_Lower_Secondary": "Completion rate (Lower secondary, avg)",
+                            "Completion_Avg_Upper_Secondary": "Completion rate (Upper secondary, avg)",
+                            "Completion_Gap_Primary": "Completion rate gender gap (Primary)",
+                            "Completion_Gap_Lower_Secondary": "Completion rate gender gap (Lower secondary)",
+                            "Completion_Gap_Upper_Secondary": "Completion rate gender gap (Upper secondary)",
+                        },
+                        "Learning": {
+                            "Grade_2_3_Proficiency_Reading": "Grade 2–3 proficiency (Reading)",
+                            "Grade_2_3_Proficiency_Math": "Grade 2–3 proficiency (Math)",
+                            "Primary_End_Proficiency_Reading": "Primary end proficiency (Reading)",
+                            "Primary_End_Proficiency_Math": "Primary end proficiency (Math)",
+                            "Lower_Secondary_End_Proficiency_Reading": "Lower secondary end proficiency (Reading)",
+                            "Lower_Secondary_End_Proficiency_Math": "Lower secondary end proficiency (Math)",
+                        },
+                        "Context": {
+                            "Youth_15_24_Literacy_Rate_Male": "Youth literacy rate (Male)",
+                            "Youth_15_24_Literacy_Rate_Female": "Youth literacy rate (Female)",
+                            "Literacy_Gap": "Youth literacy gender gap (Male - Female)",
+                            "Birth_Rate": "Birth rate",
+                            "Unemployment_Rate": "Unemployment rate",
+                        },
+                    },
                 ),
                 ui.input_checkbox_group(
-                    "gender",
-                    "Gender:",
-                    choices=["Male", "Female"],
-                    selected=["Male", "Female"]
+                    "input_completion_levels",
+                    "Completion Level",
+                    choices={
+                        "Primary": "Primary",
+                        "Lower_Secondary": "Lower secondary",
+                        "Upper_Secondary": "Upper secondary",
+                    },
+                    selected=["Primary", "Lower_Secondary", "Upper_Secondary"],
                 ),
-                ui.input_action_button("apply_filters", "Apply Filters", class_="btn-primary w-100")
+                ui.input_action_button("apply_filters", "Apply Filters", class_="btn-primary w-100"),
             ),
-            width=300
+            width=300,
         ),
 
-# Main content area with three cards
         ui.layout_column_wrap(
-            # World Map Card (full width)
             ui.card(
                 ui.card_header("Global Education Indicators Map"),
                 output_widget("world_map")
-                #ui.div("World map will be displayed here", style="padding: 20px; text-align: center; color: #888;")
             ),
-            
-            # Plots and Data Table side by side
             ui.layout_column_wrap(
-                # Plots Card
                 ui.card(
                     ui.card_header("Trend Analysis"),
-                    ui.output_plot("hist"),  # histogram output
-                    #ui.div("Plots will be displayed here", style="padding: 20px; text-align: center; color: #888;")
+                    ui.div("Plots will be displayed here"),
                 ),
-                
-                # Data Table Card
                 ui.card(
-                    ui.card_header("Country Data"),
-                    ui.output_plot("bar"),  # barplot output
-                    #ui.div("Data table will be displayed here", style="padding: 20px; text-align: center; color: #888;")
+                    ui.card_header("Filtered Data"),
+                    ui.output_table("output_tbl"),
                 ),
-                
-                width=1/2
+                width=1/2,
             ),
-            
             width=1,
-            heights_equal="row"
-        )
-    )
+            heights_equal="row",
+        ),
+    ),
 )
 
-# Shiny Server Section
 
 def server(input, output, session):
-    # Add your server logic here
+
+    # 1) All data wrangling here
     @reactive.Calc
-    def filtered_df():
-        d = df.copy()
+    def processed_df() -> pd.DataFrame:
+        processed = df.copy()
 
-        # Filter by region if not "All"
-        if input.region() != "All":
-            d = d[d["Region"] == input.region()]
-        
-        if len(input.country()) > 0: 
-            d = d[d["Countries and areas"].isin(input.country())]
+        # Drop unused columns (handle trailing space safely)
+        cols_to_drop = ["Latitude ", "Longitude", "OOSR_Pre0Primary_Age_Male", "OOSR_Pre0Primary_Age_Female"]
+        processed = processed.drop(columns=[c for c in cols_to_drop if c in processed.columns])
 
-        br_min, br_max = input.birth_rate_range() 
-        d = d[(d["Birth_Rate"] >= br_min) & (d["Birth_Rate"] <= br_max)]
+        # iso3
+        processed["iso3"] = processed["Countries and areas"].apply(to_iso3)
 
-        return d
+        # Fix country name for STP
+        processed.loc[processed["iso3"] == "STP", "Countries and areas"] = "Sao Tome and Principe"
 
-    @reactive.Effect
-    def _update_country_choices():
-        region = input.region()
+        # Region mapping + remove Other
+        processed["Region"] = processed["Countries and areas"].map(region_map).fillna("Other")
+        processed = processed[processed["Region"] != "Other"].copy()
 
-        if region == "All":
-            choices = sorted(df["Countries and areas"].unique())
-        else:
-            choices = sorted(df[df["Region"] == region]["Countries and areas"].unique())
+        # 0 -> NaN for numeric columns
+        numeric_cols = processed.select_dtypes(include=["number"]).columns
+        processed[numeric_cols] = processed[numeric_cols].replace(0, np.nan)
 
-        update_selectize(
-            "country",
-            choices=choices,
+        # Literacy gap + average
+        processed["Literacy_Gap"] = (
+            processed["Youth_15_24_Literacy_Rate_Male"] - processed["Youth_15_24_Literacy_Rate_Female"]
+        )
+        processed["Literacy_Avg"] = processed[
+            ["Youth_15_24_Literacy_Rate_Male", "Youth_15_24_Literacy_Rate_Female"]
+        ].mean(axis=1)
+
+        # Completion + OOSR gaps/avgs
+        levels = ["Primary", "Lower_Secondary", "Upper_Secondary"]
+        for level in levels:
+            processed[f"Completion_Gap_{level}"] = (
+                processed[f"Completion_Rate_{level}_Male"] - processed[f"Completion_Rate_{level}_Female"]
             )
+            processed[f"Completion_Avg_{level}"] = processed[
+                [f"Completion_Rate_{level}_Male", f"Completion_Rate_{level}_Female"]
+            ].mean(axis=1)
 
-    @reactive.effect
-    @reactive.event(input.reset_all)
-    def _reset_filters():
-        ui.update_select("origin", selected="All")
-        ui.update_slider("mpg", value=0)
-        ui.update_checkbox_group("cols", selected=["Name", "MPG", "HP"])
-        ui.update_numeric("n_rows", value=10)
-        ui.update_switch("log_scale", value=False)
-        ui.update_radio_buttons("chart_type", selected="scatter")
+            processed[f"OOSR_Gap_{level}"] = (
+                processed[f"OOSR_{level}_Age_Male"] - processed[f"OOSR_{level}_Age_Female"]
+            )
+            processed[f"OOSR_Avg_{level}"] = processed[
+                [f"OOSR_{level}_Age_Male", f"OOSR_{level}_Age_Female"]
+            ].mean(axis=1)
 
+        return processed
+
+    # 2) Apply filters (triggered by button)
+    @reactive.Calc
+    @reactive.event(input.apply_filters)
+    def filtered_df():
+        d = processed_df()
+    
+        selected_regions = input.input_region()
+        if selected_regions:
+            d = d[d["Region"].isin(selected_regions)].copy()
+    
+        return d
 
     @output
     @render_widget
     def world_map():
         d = filtered_df()
-        col = input.var()
-
-        # map version using ipyleaflet
-        # fig = px.scatter_geo(
-        #     d,
-        #     lat="Latitude",
-        #     lon="Longitude",
-        #     hover_name="Countries and areas",
-        #     color=col,
-        #     color_continuous_scale="Viridis",
-        #     projection="natural earth",
-        #     size_max=10
-        # )
-
-        # fig.update_layout(
-        #     title=f"World Map — {col}",
-        #     margin=dict(l=0, r=0, t=30, b=0)
-        # )
-
-        # map version from EDA
+        metric = input.input_map_metric()
         fig = px.choropleth(
             d, 
             locations="iso3", 
             hover_name="Countries and areas",
-            color=col,
-            color_continuous_scale="Viridis",
-            #range_color=(0,10),
+            color=metric,
+            color_continuous_scale="viridis",
             projection="natural earth"
         )
 
@@ -326,61 +343,14 @@ def server(input, output, session):
         return fig
 
     @output
-    @render.plot
-    def hist():
-        col = input.var()
+    @render.table
+    def output_tbl():
         d = filtered_df()
-
-        fig, ax = plt.subplots(figsize=(7, 4))
-
-        # If no country selected, show all countries in one histogram
-        if len(input.country()) == 0:
-            ax.hist(d[col].dropna(), bins=20, color="skyblue", edgecolor="black")
-            ax.set_title(f"Histogram of {col} (All Countries)")
-            ax.set_xlabel(col)
-            ax.set_ylabel("Count")
-            return fig
-
-        # Otherwise, plot one histogram per selected country
-        for country in input.country():
-            subset = d[d["Countries and areas"] == country][col].dropna()
-            if len(subset) > 0:
-                ax.hist(subset, bins=20, alpha=0.5, label=country)
-
-        ax.set_title(f"Histogram of {col} by Country")
-        ax.set_xlabel(col)
-        ax.set_ylabel("Count")
-        ax.legend(title="Country")
-
-        return fig
-
-    @output
-    @render.plot
-    def bar():
-        col = input.var()
-        d = filtered_df()
-
-        # If no country selected, show all countries
-        if len(input.country()) == 0:
-            d = d.copy()
-        else:
-            d = d[d["Countries and areas"].isin(input.country())]
-
-        fig, ax = plt.subplots(figsize=(10, 5))
-
-        ax.bar(
-            d["Countries and areas"],
-            d[col],
-            color=plt.cm.tab20.colors[: len(d)]
-        )
-
-        ax.set_title(f"{col} by Country")
-        ax.set_xlabel("Country")
-        ax.set_ylabel(col)
-        ax.tick_params(axis="x", rotation=90)
-
-        return fig
-
-
+        # show a few cols including the selected metric
+        metric = input.input_map_metric()
+        cols = ["Countries and areas", "Region", "iso3", metric]
+        cols = [c for c in cols if c in d.columns]
+        return d[cols]
+        
 
 app = App(app_ui, server)
