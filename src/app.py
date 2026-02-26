@@ -1,5 +1,6 @@
 from shiny import App, ui, render, reactive
-from shinywidgets import output_widget, render_widget
+from shinywidgets import output_widget, render_widget, render_plotly
+from shiny.ui import update_selectize
 
 # libraries for data processing
 import pandas as pd
@@ -14,6 +15,9 @@ import seaborn as sns
 import scienceplots
 import pycountry
 
+# Load data
+#data_path = Path(__file__).resolve().parent.parent / "data" / "raw" / "Global_education.csv"
+#df = pd.read_csv(data_path, encoding="latin-1")
 df = pd.read_csv('data/raw/Global_Education.csv', encoding='latin-1')
 
 # Fix country naming inconsistencies
@@ -234,10 +238,20 @@ app_ui = ui.page_fluid(
                     ui.div("Plots will be displayed here"),
                 ),
                 ui.card(
-                    ui.card_header("Filtered Data"),
-                    ui.output_table("output_tbl"),
+                    ui.card_header("Bar plot"),
+                    #ui.output_plot("bar"),
+                    ui.div("Plots will be displayed here"),
                 ),
-                width=1/2,
+                ui.card(
+                    ui.card_header("Literacy Scatterplot"),
+                    output_widget("scatterplot"),
+                    full_screen=True,
+                ),
+                ui.card(
+                    ui.card_header("Data Table"),
+                    ui.output_data_frame("tbl"),
+                ),
+                width=1/4,
             ),
             width=1,
             heights_equal="row",
@@ -298,9 +312,9 @@ def server(input, output, session):
 
         return processed
 
-    # 2) Apply filters (triggered by button)
+    # 2) Apply filters (triggered by click filter button)
     @reactive.Calc
-    @reactive.event(input.apply_filters)
+    @reactive.event(input.apply_filters, ignore_none=False)
     def filtered_df():
         d = processed_df()
     
@@ -335,16 +349,49 @@ def server(input, output, session):
         )
 
         return fig
+    
 
     @output
-    @render.table
-    def output_tbl():
+    @render_plotly
+    def scatterplot():
         d = filtered_df()
-        # show a few cols including the selected metric
+
+        fig = px.scatter(
+            d,
+            x="Youth_15_24_Literacy_Rate_Male",
+            y="Youth_15_24_Literacy_Rate_Female",
+            color="Region",
+            hover_name="Countries and areas",
+            color_discrete_sequence=px.colors.qualitative.Set2,
+            labels={
+                "Region": "Region",
+                "Youth_15_24_Literacy_Rate_Male": "Literacy Rate (Male)",
+                "Youth_15_24_Literacy_Rate_Female": "Literacy Rate (Female)",
+            }
+        )
+
+        # Add 45-degree diagonal line (y = x)
+        fig.add_shape(
+            type="line",
+            x0=0, y0=0,
+            x1=100, y1=100,
+            line=dict(color="black", dash="dash")
+        )
+
+        return fig
+
+    @output
+    @render.data_frame
+    def tbl():
+        d = filtered_df()
         metric = input.input_map_metric()
         cols = ["Countries and areas", "Region", "iso3", metric]
         cols = [c for c in cols if c in d.columns]
-        return d[cols]
-        
+
+        return render.DataGrid(
+            d[cols],
+            selection_mode="rows",
+            height="300px"
+        )
 
 app = App(app_ui, server)

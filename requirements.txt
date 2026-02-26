@@ -8,3 +8,5 @@ scienceplots==2.2.0
 scikit-learn==1.8.0
 nbformat==5.10.4
 pycountry==24.6.1
+shinywidgets==0.7.1
+anywidget==0.9.21
