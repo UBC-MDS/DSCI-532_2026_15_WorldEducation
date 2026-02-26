@@ -14,8 +14,6 @@ import plotly.express as px
 import seaborn as sns
 import scienceplots
 import pycountry
-from ipyleaflet import Map
-import geopandas as gpd
 
 # Load data
 #data_path = Path(__file__).resolve().parent.parent / "data" / "raw" / "Global_education.csv"
@@ -355,11 +353,20 @@ def server(input, output, session):
     @render_plotly
     def scatterplot():
         d = filtered_df()
+        
         return px.scatter(
             d,
             x="Youth_15_24_Literacy_Rate_Male",
             y="Youth_15_24_Literacy_Rate_Female",
-            #trendline="lowess"
+            color="Region",
+            hover_name="Countries and areas",
+            color_discrete_sequence=px.colors.qualitative.Set2,
+            trendline="ols",
+            labels={
+                "Region": "Region",
+                "Youth_15_24_Literacy_Rate_Male": "Literacy Rate (Male)",
+                "Youth_15_24_Literacy_Rate_Female": "Literacy Rate (Female)",
+            }
         )
     
     @output
@@ -375,16 +382,5 @@ def server(input, output, session):
             selection_mode="rows",
             height="300px"
         )
-
-    @output
-    @render.table
-    def output_tbl():
-        d = filtered_df()
-        # show a few cols including the selected metric
-        metric = input.input_map_metric()
-        cols = ["Countries and areas", "Region", "iso3", metric]
-        cols = [c for c in cols if c in d.columns]
-        return d[cols]
-        
 
 app = App(app_ui, server)
