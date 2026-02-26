@@ -314,7 +314,7 @@ def server(input, output, session):
 
         return processed
 
-    # 2) Apply filters (triggered by button)
+    # 2) Apply filters (triggered by click filter button)
     @reactive.Calc
     @reactive.event(input.apply_filters, ignore_none=False)
     def filtered_df():
