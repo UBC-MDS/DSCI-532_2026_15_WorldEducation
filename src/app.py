@@ -93,25 +93,20 @@ app_ui = ui.page_fluid(
             ),
             ui.layout_column_wrap(
                 ui.card(
-                    ui.card_header("Trend Analysis"),
-                    ui.div("Plots will be displayed here"),
-                ),
-                ui.card(
                     ui.card_header("Bar plot"),
-                    #ui.output_plot("bar"),
-                    ui.div("Plots will be displayed here"),
+                    output_widget("education_level_by_gender_bar"),
                 ),
                 ui.card(
                     ui.card_header("Literacy Scatterplot"),
                     output_widget("literacy_scatterplot"),
                     full_screen=True,
                 ),
-                ui.card(
-                    ui.card_header("Data Table"),
-                    ui.output_data_frame("tbl"),
-                ),
-                width=1/4,
+                width=1/2,
             ),
+            ui.card(
+                ui.card_header("Data Table"),
+                ui.output_data_frame("tbl"),
+                ),
             width=1,
             heights_equal="row",
         ),
@@ -182,7 +177,7 @@ def server(input, output, session):
         pd.Dataframe
             The melted dataframe
         """
-        d = filtered_df()
+        d = filtered_df().copy()
     
         d = d[[
                 "Completion_Rate_Primary_Male",
@@ -191,6 +186,8 @@ def server(input, output, session):
                 "Completion_Rate_Lower_Secondary_Female",
                 "Completion_Rate_Upper_Secondary_Male",
                 "Completion_Rate_Upper_Secondary_Female",
+                "Region",
+                "iso3"
             ]]
         d = pd.melt(
             d, 
@@ -204,12 +201,19 @@ def server(input, output, session):
                 "Completion_Rate_Upper_Secondary_Female",
             ],
             value_name="Completion_Rate",
-            var_name="Completion_Rate_Group"
+            var_name="Completion_Rate_Group",
             ignore_index=True
             )
         d["Sex"] = d["Completion_Rate_Group"].str.split("_").str[-1]
         d["Education_Level"] = d["Completion_Rate_Group"].str.split("_").str[2:-1].str.join("_")
     
+        d = (
+            d[["Sex", "Education_Level", "Completion_Rate"]]
+            .groupby(["Sex", "Education_Level"])
+            .mean()
+            .reset_index()
+        )
+
         return d
 
     # 3) Create object to display
@@ -318,25 +322,30 @@ def server(input, output, session):
 
 
 
-    # @output
-    # @render_plotly
-    # def education_level_by_gender_bar():
-    #     """Create bar plot of education level completed separated by gender.
+    @output
+    @render_plotly
+    def education_level_by_gender_bar():
+        """Create bar plot of education level completed separated by gender.
 
-    #     Parameters
-    #     ----------
-    #     None
+        Parameters
+        ----------
+        None
 
-    #     Returns
-    #     -------
+        Returns
+        -------
+        px.bar
+            Plotly express bar plot object.
         
-    #     """
-    #     d = filtered_df()
+        """
+        d = melted_completion_df()
 
-    #     fig = px.bar(
-    #         d,
+        fig = px.bar(
+            d,
+            x = "Education_Level",
+            y = "Completion_Rate"
+        )
 
-    #     )
+        return fig
 
     
 
