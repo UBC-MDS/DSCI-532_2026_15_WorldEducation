@@ -87,9 +87,11 @@ app_ui = ui.page_fluid(
         ),
 
         ui.layout_column_wrap(
-            ui.card(
-                ui.card_header("Global Education Indicators Map"),
-                output_widget("world_map")
+            ui.layout_column_wrap(
+                ui.card(
+                    ui.card_header("Global Education Indicators Map"),
+                    output_widget("world_map"),
+                ),
             ),
             ui.layout_column_wrap(
                 ui.card(
@@ -101,7 +103,11 @@ app_ui = ui.page_fluid(
                     output_widget("literacy_scatterplot"),
                     full_screen=True,
                 ),
-                width=1/2,
+                ui.card(
+                    ui.card_header("SOME KPI"),
+                    
+                ),
+                width=1/3
             ),
             ui.card(
                 ui.card_header("Data Table"),
@@ -293,6 +299,14 @@ def server(input, output, session):
             line=dict(color="black", dash="dash")
         )
 
+        # Tidy axis
+        fig.update_xaxes(dtick=20)
+        fig.update_yaxes(dtick=20)
+        fig.update_layout(
+            xaxis=dict(range=[1, 100]),  # x scale follows y
+            yaxis=dict(range=[1, 100])
+        )
+
         return fig
 
     @output
@@ -349,8 +363,11 @@ def server(input, output, session):
             labels={
                 "Education_Level": "Education Level",
                 "Completion_Rate": "Completion Rate (%)"
-            }
+            },
+            range_y=[0,100]
         )
+
+        fig.update_yaxes(dtick=20)
 
         return fig
 
