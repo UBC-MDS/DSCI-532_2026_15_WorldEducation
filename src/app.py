@@ -93,11 +93,11 @@ app_ui = ui.page_fluid(
             ),
             ui.layout_column_wrap(
                 ui.card(
-                    ui.card_header("Bar plot"),
+                    ui.card_header("Education Level by Sex"),
                     output_widget("education_level_by_gender_bar"),
                 ),
                 ui.card(
-                    ui.card_header("Literacy Scatterplot"),
+                    ui.card_header("Literacy Rate by Sex"),
                     output_widget("literacy_scatterplot"),
                     full_screen=True,
                 ),
