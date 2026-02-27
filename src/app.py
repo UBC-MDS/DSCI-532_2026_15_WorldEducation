@@ -205,7 +205,7 @@ def server(input, output, session):
             ignore_index=True
             )
         d["Sex"] = d["Completion_Rate_Group"].str.split("_").str[-1]
-        d["Education_Level"] = d["Completion_Rate_Group"].str.split("_").str[2:-1].str.join("_")
+        d["Education_Level"] = d["Completion_Rate_Group"].str.split("_").str[2:-1].str.join(" ")
     
         d = (
             d[["Sex", "Education_Level", "Completion_Rate"]]
@@ -280,8 +280,8 @@ def server(input, output, session):
             color_discrete_sequence=px.colors.qualitative.Set2,
             labels={
                 "Region": "Region",
-                "Youth_15_24_Literacy_Rate_Male": "Literacy Rate (Male)",
-                "Youth_15_24_Literacy_Rate_Female": "Literacy Rate (Female)",
+                "Youth_15_24_Literacy_Rate_Male": " Male Literacy Rate",
+                "Youth_15_24_Literacy_Rate_Female": "Female Literacy Rate",
             }
         )
 
@@ -342,7 +342,14 @@ def server(input, output, session):
         fig = px.bar(
             d,
             x = "Education_Level",
-            y = "Completion_Rate"
+            y = "Completion_Rate",
+            color = "Sex",
+            barmode = "group",
+            category_orders = {"Education_Level": ["Primary", "Lower Secondary", "Upper Secondary"]},
+            labels={
+                "Education_Level": "Education Level",
+                "Completion_Rate": "Completion Rate (%)"
+            }
         )
 
         return fig
