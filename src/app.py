@@ -51,6 +51,19 @@ FIXES = {
 
 # Get iso3 for plotting
 def to_iso3(name):
+    """
+    Convert data from "Countries and areas" feature of the global education dataframe into iso country codes
+    
+    Parameters
+    ----------
+    name: str
+        Country name.
+    
+    Returns
+    -------
+    str
+        The three character iso code    
+    """
     if pd.isna(name):
         return None
     
@@ -244,7 +257,7 @@ app_ui = ui.page_fluid(
                 ),
                 ui.card(
                     ui.card_header("Literacy Scatterplot"),
-                    output_widget("scatterplot"),
+                    output_widget("literacy_scatterplot"),
                     full_screen=True,
                 ),
                 ui.card(
@@ -265,6 +278,25 @@ def server(input, output, session):
     # 1) All data wrangling here
     @reactive.Calc
     def processed_df() -> pd.DataFrame:
+        """Preprocess the dataframe.
+
+        Processing:
+        - Drop columns: Latitude, Longitude, OOSR_Pre0Primary_Age_Male, OOSR_Pre0Primary_Age_Female
+        - Create columns: iso3, Region, Literacy_Gap, Literacy_Avg, Completion_Gap_{education_level},
+        Completion_Avg_{education_level}, OOSR_Gap_{education_level}, OOSR_Avg_{education_level}
+        - Fixed country names
+        - Changed missing values to nan type
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        plotly.express.chorpleth
+            Interactive world map figure.
+
+        """
         processed = df.copy()
 
         # Drop unused columns (handle trailing space safely)
@@ -316,6 +348,21 @@ def server(input, output, session):
     @reactive.Calc
     @reactive.event(input.apply_filters, ignore_none=False)
     def filtered_df():
+        """Apply filters when triggered by click of "Apply Filters" button
+
+        Filters included are:
+        
+        - selected regions
+    
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        pd.Dataframe
+            The filtered world education dataframe.
+        """
         d = processed_df()
     
         selected_regions = input.input_region()
@@ -327,6 +374,17 @@ def server(input, output, session):
     @output
     @render_widget
     def world_map():
+        """Create interactive world map figure.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        plotly.express.chorpleth
+            Interactive world map figure.
+        """
         d = filtered_df()
         metric = input.input_map_metric()
         fig = px.choropleth(
@@ -353,7 +411,18 @@ def server(input, output, session):
 
     @output
     @render_plotly
-    def scatterplot():
+    def literacy_scatterplot():
+        """Create scatterplot of male vs female literacy rates by region.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        plotly.express.scatter
+            Scatterplot of male vs female literacy rate by region.
+        """
         d = filtered_df()
 
         fig = px.scatter(
@@ -383,6 +452,17 @@ def server(input, output, session):
     @output
     @render.data_frame
     def tbl():
+         """Create DataGrid object to be displayed
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        shiny.render.DataGrid
+            Tabular data to be displayed.
+        """
         d = filtered_df()
         metric = input.input_map_metric()
         cols = ["Countries and areas", "Region", "iso3", metric]
