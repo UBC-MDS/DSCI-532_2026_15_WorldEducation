@@ -1,6 +1,7 @@
 
 import pandas as pd
 import numpy as np
+import pycountry
 
 # Fix country naming inconsistencies
 FIXES = {
