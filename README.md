@@ -4,6 +4,6 @@ This project is a dashboard to explore and understand world education dataset fr
 
 ## Dashboard
 
-[World Education Dashboard](https://connect.posit.cloud/meirikson/content/019c8cc6-d28c-efe8-ee1d-c42e7d152b35)
+[World Education Dashboard](https://sapolraadnui-worldeducation.share.connect.posit.cloud)
 
-[World Education Dashboard (dev)](https://connect.posit.cloud/meirikson/content/019c8d25-8216-59a4-6386-9dec57ee4bab)
+[World Education Dashboard (dev)](https://sapolraadnui-worldeducation-dev.share.connect.posit.cloud/)
