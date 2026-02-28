@@ -1,78 +1,451 @@
 from shiny import App, ui, render, reactive
+from shinywidgets import output_widget, render_widget, render_plotly
+from shiny.ui import update_selectize
+
+# libraries for data processing
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+
+# libraries for visualization
+import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
+import plotly.express as px
+import seaborn as sns
+import scienceplots
+import pycountry
+
+# Load data
+#data_path = Path(__file__).resolve().parent.parent / "data" / "raw" / "Global_education.csv"
+#df = pd.read_csv(data_path, encoding="latin-1")
+df = pd.read_csv("data/processed/processed_global_education.csv", encoding='latin-1')
+world_avg_el_completion_rate = df[["Completion_Rate_Primary_Male", "Completion_Rate_Primary_Female",]].mean().mean()
+
+def kpi1_caption(rate):
+    """Create caption for primary completion rate KPI"""
+
+    rate_diff = rate - world_avg_el_completion_rate
+
+    if rate_diff >= 0:
+        caption_str = f"Completion rate is {rate_diff:.1f} % above world average {world_avg_el_completion_rate:.1f} %"
+    else:
+        caption_str = f"Completion rate is {-rate_diff:.1f} % below world average {world_avg_el_completion_rate:.1f} %"
+
+    return ui.tags.div(
+        ui.HTML(f'<strong style="opacity:0.9">{caption_str}</strong>'),
+    )
+
+def kpi2_caption(rate_diff):
+    """Create caption for primary completion rate gender difference KPI"""
+
+    if rate_diff < -2:
+        caption_str = "Male completion rate is more than 2 percentage points below female"
+    elif rate_diff < -1:
+        caption_str = "Male completion rate is more than 1 percentage point below female"
+    elif rate_diff < 1:
+        caption_str = "Completion rates are within 1 percentage point"
+    elif rate_diff < 2:
+        caption_str = "Female completion rate is more than 1 percentage point below male"
+    else:
+        caption_str = "Female completion rate is more than 2 percentage points below male"
+
+    return ui.tags.div(
+        ui.HTML(f'<strong style="opacity:0.9">{caption_str}</strong>'),
+    )
 
 app_ui = ui.page_fluid(
     ui.h2("World Education Dashboard"),
     ui.layout_sidebar(
-        # Left sidebar with filters
         ui.sidebar(
             ui.card(
                 ui.card_header("Filters"),
-                ui.input_select(
-                    "region",
-                    "Select Region:",
-                    choices=["All", "North America", "South America", "Europe", "Asia", "Africa"]
-                ),
-                ui.input_select(
-                    "education_level",
-                    "Education Level:",
-                    choices=["Primary", "Lower Secondary", "Upper Secondary"]
-                ),
-                ui.input_select(
-                    "indicator",
-                    "Indicator:",
-                    choices=["Completion Rate", "Literacy Rate", "Enrollment Rate"]
-                ),
-                ui.input_slider(
-                    "year_range",
-                    "Year Range:",
-                    min=2000,
-                    max=2024,
-                    value=[2010, 2024]
-                ),
                 ui.input_checkbox_group(
-                    "gender",
-                    "Gender:",
-                    choices=["Male", "Female"],
-                    selected=["Male", "Female"]
+                    "input_region",
+                    "Select Region:",
+                    choices=["North America", "South America", "Europe", "Asia", "Africa", "Oceania"],
                 ),
-                ui.input_action_button("apply_filters", "Apply Filters", class_="btn-primary w-100")
+                ui.input_action_button("apply_filters", "Apply Filters", class_="btn-primary w-100"),
             ),
-            width=300
+            width=300,
         ),
-        
-# Main content area with three cards
+
         ui.layout_column_wrap(
-            # World Map Card (full width)
-            ui.card(
-                ui.card_header("Global Education Indicators Map"),
-                ui.div("World map will be displayed here", style="padding: 20px; text-align: center; color: #888;")
-            ),
-            
-            # Plots and Data Table side by side
             ui.layout_column_wrap(
-                # Plots Card
                 ui.card(
-                    ui.card_header("Trend Analysis"),
-                    ui.div("Plots will be displayed here", style="padding: 20px; text-align: center; color: #888;")
+                    ui.card_header("Global Education Indicators Map"),
+                    ui.input_select(
+                    "input_map_metric",
+                    "Map metric",
+                        {
+                            "Access": {
+                                "OOSR_Avg_Primary": "Out-of-school rate (Primary, avg)",
+                                "OOSR_Avg_Lower_Secondary": "Out-of-school rate (Lower secondary, avg)",
+                                "OOSR_Avg_Upper_Secondary": "Out-of-school rate (Upper secondary, avg)",
+                                "OOSR_Gap_Primary": "Out-of-school rate gender gap (Primary)",
+                                "OOSR_Gap_Lower_Secondary": "Out-of-school rate gender gap (Lower secondary)",
+                                "OOSR_Gap_Upper_Secondary": "Out-of-school rate gender gap (Upper secondary)",
+                                "Gross_Primary_Education_Enrollment": "Gross primary enrollment",
+                                "Gross_Tertiary_Education_Enrollment": "Gross tertiary enrollment",
+                            },
+                            "Completion": {
+                                "Completion_Avg_Primary": "Completion rate (Primary, avg)",
+                                "Completion_Avg_Lower_Secondary": "Completion rate (Lower secondary, avg)",
+                                "Completion_Avg_Upper_Secondary": "Completion rate (Upper secondary, avg)",
+                                "Completion_Gap_Primary": "Completion rate gender gap (Primary)",
+                                "Completion_Gap_Lower_Secondary": "Completion rate gender gap (Lower secondary)",
+                                "Completion_Gap_Upper_Secondary": "Completion rate gender gap (Upper secondary)",
+                            },
+                            "Learning": {
+                                "Grade_2_3_Proficiency_Reading": "Grade 2–3 proficiency (Reading)",
+                                "Grade_2_3_Proficiency_Math": "Grade 2–3 proficiency (Math)",
+                                "Primary_End_Proficiency_Reading": "Primary end proficiency (Reading)",
+                                "Primary_End_Proficiency_Math": "Primary end proficiency (Math)",
+                                "Lower_Secondary_End_Proficiency_Reading": "Lower secondary end proficiency (Reading)",
+                                "Lower_Secondary_End_Proficiency_Math": "Lower secondary end proficiency (Math)",
+                            },
+                            "Context": {
+                                "Youth_15_24_Literacy_Rate_Male": "Youth literacy rate (Male)",
+                                "Youth_15_24_Literacy_Rate_Female": "Youth literacy rate (Female)",
+                                "Literacy_Gap": "Youth literacy gender gap (Male - Female)",
+                                "Birth_Rate": "Birth rate",
+                                "Unemployment_Rate": "Unemployment rate",
+                            },
+                        },
+                    ),
+                    output_widget("world_map"),
                 ),
-                
-                # Data Table Card
-                ui.card(
-                    ui.card_header("Country Data"),
-                    ui.div("Data table will be displayed here", style="padding: 20px; text-align: center; color: #888;")
-                ),
-                
-                width=1/2
             ),
-            
+            ui.layout_column_wrap(
+                ui.card(
+                    ui.card_header("Education Level by Sex"),
+                    output_widget("education_level_by_gender_bar"),
+                ),
+                ui.card(
+                    ui.card_header("Literacy Rate by Sex"),
+                    output_widget("literacy_scatterplot"),
+                    full_screen=True,
+                ),
+                ui.card(
+                    ui.card_header("Primary School Completion"),
+                    ui.layout_column_wrap(
+                        ui.output_ui("elementary_completion_box"),
+                        ui.output_ui("el_completion_rate_gender_difference_box"),
+                        fill=False,
+                        width=1,
+                    ),
+                ),
+                width=1/3
+            ),
+            ui.card(
+                ui.card_header("Data Table"),
+                ui.output_data_frame("tbl"),
+                ),
             width=1,
-            heights_equal="row"
-        )
-    )
+            heights_equal="row",
+        ),
+    ),
 )
 
+
 def server(input, output, session):
-    # Add your server logic here
-    pass
+
+    # 1) Get dataframe
+    @reactive.Calc
+    def processed_df() -> pd.DataFrame:
+        """Imports processed data frame
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        pd.Dataframe
+            The processed world education dataframe
+
+        """
+        processed = df.copy()
+
+        return processed
+
+    # 2) Apply filters (triggered by click filter button)
+    @reactive.Calc
+    @reactive.event(input.apply_filters, ignore_none=False)
+    def filtered_df():
+        """Apply filters when triggered by click of "Apply Filters" button
+
+        Filters included are:
+        
+        - selected regions
+    
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        pd.Dataframe
+            The filtered world education dataframe.
+        """
+        d = processed_df()
+    
+        selected_regions = input.input_region()
+        if selected_regions:
+            d = d[d["Region"].isin(selected_regions)].copy()
+    
+        return d
+    
+    @reactive.Calc
+    def sex_completion_rate_df():
+        """Melt columns with data about education level completion.
+
+        This makes it possible create education_level_by_gender_bar bar plot.
+            
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        pd.Dataframe
+            The melted dataframe
+        """
+        d = filtered_df().copy()
+    
+        d = d[[
+                "Completion_Rate_Primary_Male",
+                "Completion_Rate_Primary_Female",
+                "Completion_Rate_Lower_Secondary_Male",
+                "Completion_Rate_Lower_Secondary_Female",
+                "Completion_Rate_Upper_Secondary_Male",
+                "Completion_Rate_Upper_Secondary_Female",
+                "Region",
+                "iso3"
+            ]]
+        d = pd.melt(
+            d, 
+            id_vars=["Region", "iso3"], 
+            value_vars=[
+                "Completion_Rate_Primary_Male",
+                "Completion_Rate_Primary_Female",
+                "Completion_Rate_Lower_Secondary_Male",
+                "Completion_Rate_Lower_Secondary_Female",
+                "Completion_Rate_Upper_Secondary_Male",
+                "Completion_Rate_Upper_Secondary_Female",
+            ],
+            value_name="Completion_Rate",
+            var_name="Completion_Rate_Group",
+            ignore_index=True
+            )
+        d["Sex"] = d["Completion_Rate_Group"].str.split("_").str[-1]
+        d["Education_Level"] = d["Completion_Rate_Group"].str.split("_").str[2:-1].str.join(" ")
+    
+        d = (
+            d[["Sex", "Education_Level", "Completion_Rate"]]
+            .groupby(["Sex", "Education_Level"])
+            .mean()
+            .reset_index()
+        )
+
+        return d
+
+    # 3) Create object to display
+    @output
+    @render_widget
+    def world_map():
+        """Create interactive world map figure.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        plotly.express.chorpleth
+            Interactive world map figure.
+        """
+        d = filtered_df()
+        metric = input.input_map_metric()
+        fig = px.choropleth(
+            d, 
+            locations="iso3", 
+            hover_name="Countries and areas",
+            color=metric,
+            color_continuous_scale="viridis",
+            projection="natural earth"
+        )
+
+        fig.update_geos(
+            showcoastlines=True,
+            showcountries=True,
+            showframe=False
+        )
+
+        fig.update_layout(
+            margin=dict(l=0, r=0, t=30, b=0) 
+        )
+
+        return fig
+    
+    @output
+    @render_plotly
+    def literacy_scatterplot():
+        """Create scatterplot of male vs female literacy rates by region.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        plotly.express.scatter
+            Scatterplot of male vs female literacy rate by region.
+        """
+        d = filtered_df()
+
+        fig = px.scatter(
+            d,
+            x="Youth_15_24_Literacy_Rate_Male",
+            y="Youth_15_24_Literacy_Rate_Female",
+            color="Region",
+            hover_name="Countries and areas",
+            color_discrete_sequence=px.colors.qualitative.Set2,
+            labels={
+                "Region": "Region",
+                "Youth_15_24_Literacy_Rate_Male": " Male Literacy Rate",
+                "Youth_15_24_Literacy_Rate_Female": "Female Literacy Rate",
+            }
+        )
+
+        # Add 45-degree diagonal line (y = x)
+        fig.add_shape(
+            type="line",
+            x0=0, y0=0,
+            x1=100, y1=100,
+            line=dict(color="black", dash="dash")
+        )
+
+        # Tidy axis
+        fig.update_xaxes(dtick=20)
+        fig.update_yaxes(dtick=20)
+        fig.update_layout(
+            xaxis=dict(range=[1, 100]),  # x scale follows y
+            yaxis=dict(range=[1, 100])
+        )
+
+        return fig
+
+    @output
+    @render.data_frame
+    def tbl():
+        """Create DataGrid object to be displayed
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        shiny.render.DataGrid
+            Tabular data to be displayed.
+        """
+        d = filtered_df()
+        metric = input.input_map_metric()
+        cols = ["Countries and areas", "Region", "iso3", metric]
+        cols = [c for c in cols if c in d.columns]
+
+        return render.DataGrid(
+            d[cols],
+            selection_mode="rows",
+            height="300px"
+        )
+
+    @output
+    @render_plotly
+    def education_level_by_gender_bar():
+        """Create bar plot of education level completed separated by gender.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        px.bar
+            Plotly express bar plot object.
+        
+        """
+        d = sex_completion_rate_df()
+
+        fig = px.bar(
+            d,
+            x = "Education_Level",
+            y = "Completion_Rate",
+            color = "Sex",
+            barmode = "group",
+            category_orders = {"Education_Level": ["Primary", "Lower Secondary", "Upper Secondary"]},
+            labels={
+                "Education_Level": "Education Level",
+                "Completion_Rate": "Completion Rate (%)"
+            },
+            range_y=[0,100]
+        )
+
+        fig.update_yaxes(dtick=20)
+
+        return fig
+
+    @render.ui
+    def elementary_completion_box():
+        avg_comp_rate = (
+            sex_completion_rate_df()[["Education_Level", "Completion_Rate"]]
+            .groupby(["Education_Level"])
+            .mean()
+            .loc["Primary"]
+            .values[0]
+        )
+
+        if np.abs(avg_comp_rate) < 70:
+            rate_theme = "danger"
+        elif np.abs(avg_comp_rate) < 90:
+            rate_theme = "warning"
+        else:
+            rate_theme = "success"
+
+        return ui.value_box(
+            "Rate", 
+            f"{avg_comp_rate:.1f} %", 
+            kpi1_caption(avg_comp_rate),
+            theme=rate_theme
+        )
+    
+    @render.ui
+    def el_completion_rate_gender_difference_box():
+        df = sex_completion_rate_df().copy()
+        male_comp_rate = (
+            df[(df["Sex"]=="Male") & (df["Education_Level"]=="Primary")]
+            .loc[:,"Completion_Rate"]
+            .values[0]
+        )
+        female_comp_rate = (
+            df[(df["Sex"]=="Female") & (df["Education_Level"]=="Primary")]
+            .loc[:,"Completion_Rate"]
+            .values[0]
+        )
+        comp_rate_diff = male_comp_rate - female_comp_rate
+
+        if np.abs(comp_rate_diff) > 2:
+            diff_theme = "danger"
+        elif np.abs(comp_rate_diff) > 1:
+            diff_theme = "warning"
+        else:
+            diff_theme = "success"
+
+        return ui.value_box(
+            "Difference between male rate and female rate", 
+            f"{comp_rate_diff:.1f} %", 
+            kpi2_caption(comp_rate_diff),
+            theme=diff_theme
+        )
 
 app = App(app_ui, server)
