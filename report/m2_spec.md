@@ -48,24 +48,28 @@ flowchart TD
     C --> L
 ```
 
-Verify your diagram satisfies the reactivity requirements in Phase 3.2 before you start coding.
-
 ### 2.4 Calculation Details
 
 1.  **processed_df**
 
 	•	Inputs: none (uses the globally loaded df)
+
 	•	Transformation: returns a copy of the processed dataset (df.copy()), no additional derived columns created in this step in the current code.
+
 	•	Consumed by: filtered_df
 
-2.  **filtered_df**
+3.  **filtered_df**
 
 	•	Inputs: processed_df, input_region, and event trigger apply_filters
+
 	•	Transformation: on clicking “Apply Filters”, filters rows to Region values selected in input_region. If no regions selected, returns the unfiltered dataset.
+
 	•	Consumed by: world_map, literacy_scatterplot, tbl, sex_completion_rate_df
 
-3.  **sex_completion_rate_df**
+5.  **sex_completion_rate_df**
 
 	•	Inputs: filtered_df
+
 	•	Transformation: selects completion rate columns by sex and education level, melts into long format, extracts Sex and Education_Level, and groups by (Sex, Education_Level) and computes mean completion rate
+
 	•	Consumed by: education_level_by_gender_bar, elementary_completion_box, el_completion_rate_gender_difference_box
