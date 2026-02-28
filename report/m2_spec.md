@@ -52,40 +52,20 @@ Verify your diagram satisfies the reactivity requirements in Phase 3.2 before yo
 
 ### 2.4 Calculation Details
 
-For each `@reactive.calc` in your diagram, briefly describe:
-
--   Which inputs it depends on.
--   What transformation it performs (e.g., "filters rows to the selected year range and region(s)").
--   Which outputs consume it.
-
 1.  **processed_df**
 
-    -   The only input is the original data frame; however, additional columns will be added as follows:
-
-        -   Literacy_Gap = **Youth_15_24_Literacy_Rate_Male-Youth_15_24_Literacy_Rate_Female**
-
-        -   Completion_Gap\_\*\*\* = Completion_Rate\_\*\*\***\_Male - Completion_Rate\_**\*\*\*\_Female
-
-            -   \*\*\* : Primary/Lower_Secondary/Upper_Secondary
-
-        -   Aggregates (regardless of genders) = (Completion_Rate\_\*\*\***\_Male + Completion_Rate\_**\*\*\*\_Female)/2
-
-    <!-- -->
-
-    -   The result is consumed by filtered_df and output_world_map
+	•	Inputs: none (uses the globally loaded df)
+	•	Transformation: returns a copy of the processed dataset (df.copy()), no additional derived columns created in this step in the current code.
+	•	Consumed by: filtered_df
 
 2.  **filtered_df**
 
-    -   The inputs are processed_df and input_regions
+	•	Inputs: processed_df, input_region, and event trigger apply_filters
+	•	Transformation: on clicking “Apply Filters”, filters rows to Region values selected in input_region. If no regions selected, returns the unfiltered dataset.
+	•	Consumed by: world_map, literacy_scatterplot, tbl, sex_completion_rate_df
 
-    -   The transformation is to filter rows to only countries in the selected regions. All the columns remain
+3.  **sex_completion_rate_df**
 
-    -   The result is consumed by output_literacy_scatter, output_tbl, and regional_summary
-
-3.  **regional_summary**
-
-    -   The inputs are filtered_df and input_completion_levels
-
-    -   The transformation is to summarize statistics for selected regions such as means/medians/standard deviations
-
-    -   The result is consumed by output_completion_chart (diverging bar chart) and output_insight_card (KPI report)
+	•	Inputs: filtered_df
+	•	Transformation: selects completion rate columns by sex and education level, melts into long format, extracts Sex and Education_Level, and groups by (Sex, Education_Level) and computes mean completion rate
+	•	Consumed by: education_level_by_gender_bar, elementary_completion_box, el_completion_rate_gender_difference_box
