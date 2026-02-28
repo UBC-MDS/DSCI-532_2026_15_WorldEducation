@@ -2,125 +2,74 @@
 
 ### 2.1 Updated Job Stories
 
-Review your M1 job stories in light of your deployment setup and any new insights. Update or add stories as needed, and track their status:
-
-+-------+------------------------------------------------------------------------------------------------------------------------------------------------+---------+-------+
-| \#    | Job Story                                                                                                                                      | Status  | Notes |
-+=======+================================================================================================================================================+=========+=======+
-| 1     | **Situation:** When I am evaluating the overall performance of education systems across countries,                                             | Pending |       |
-|       |                                                                                                                                                |         |       |
-|       | **Motivation:** I want to compare key education indicators such as completion rates and literacy rates across regions,                         |         |       |
-|       |                                                                                                                                                |         |       |
-|       | **Outcome:** so I can identify which regions are lagging behind and require targeted policy attention.                                         |         |       |
-+-------+------------------------------------------------------------------------------------------------------------------------------------------------+---------+-------+
-| 2     | **Situation:** When designing policies to bridge gender inequality in education,                                                               | Pending |       |
-|       |                                                                                                                                                |         |       |
-|       | **Motivation:** I want to compare different education variables separately for male and female students across different education levels      |         |       |
-|       |                                                                                                                                                |         |       |
-|       | **Outcome:** so I can identify gender-based disparities and design policies that promote equal access to education.                            |         |       |
-+-------+------------------------------------------------------------------------------------------------------------------------------------------------+---------+-------+
-| 3     | **Situation:** When I am reviewing large-scale global education data,                                                                          | Pending |       |
-|       |                                                                                                                                                |         |       |
-|       | **Motivation:** I want to visualize education indicators on a global heat map,                                                                 |         |       |
-|       |                                                                                                                                                |         |       |
-|       | **Outcome:** so I can quickly detect global patterns, trends, and outlier countries that require further investigation or policy intervention. |         |       |
-+-------+------------------------------------------------------------------------------------------------------------------------------------------------+---------+-------+
+| #   | Job Story                                                                                                                                                   | Status         | Notes                                                              |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | ------------------------------------------------------------------ |
+| 1   | When I am evaluating the overall performance of education systems across countries, I want to compare key education indicators such as completion rates and literacy rates across regions, so I can identify which regions are lagging behind and require targeted policy attention.     | 🔄 Revised | Due to complexity of comparing between countries, we decided to limit it to regional filtering instead (continent level). This is supported through region filtering, literacy scatter plot, completion bar chart, and output data table.|
+| 2   | When designing policies to bridge gender inequality in education, I want to compare different education variables separately for male and female students across different education levels, so I can identify gender-based disparities and design policies that promote equal access to education.                | 🔄 Revised | We narrowed this down to focus on completion rates and literacy rates. Also, we added KPI cards to reflect disparities from genders more clearly.   |
+| 3   | When I am reviewing large-scale global education data, I want to visualize education indicators on a choropleth, so I can quickly detect global patterns, trends, and outlier countries that require further investigation or policy intervention.   | ✅ Implemented | Fully implemented. What could be implement in milestone 3 would be color scaling options and map-based filtering interactions if time allows. |
 
 ### 2.2 Component Inventory
 
-Plan every input, reactive calc, and output your app will have. Use this as a checklist during Phase 3. Minimum **2 components per team member** (6 for a 3-person team, 8 for a 4-person team), with **at least 2 inputs and 2 outputs**:
-
-+-------------------------+---------------+--------------------------------------------------------------------------------+-----------------------------------------------+------------+
-| ID                      | Type          | Shiny widget / renderer                                                        | Depends on                                    | Job story  |
-+=========================+===============+================================================================================+===============================================+============+
-| input_region            | Input         | ui.input_selectize(multiple=True)                                              | \-                                            | #1, #2, #3 |
-+-------------------------+---------------+--------------------------------------------------------------------------------+-----------------------------------------------+------------+
-| input_map_metric        | Input         | ui.input_select() (grouped by theme: Access / Completion / Learning / Context) | \-                                            | #3         |
-+-------------------------+---------------+--------------------------------------------------------------------------------+-----------------------------------------------+------------+
-| input_completion_levels | Input         | ui.input_checkbox_group() (Primary / Lower / Upper Secondary)                  | \-                                            | #1, #2     |
-+-------------------------+---------------+--------------------------------------------------------------------------------+-----------------------------------------------+------------+
-| processed_df            | Reactive calc | `@reactive.calc`                                                               | \-                                            | #1, #2, #3 |
-+-------------------------+---------------+--------------------------------------------------------------------------------+-----------------------------------------------+------------+
-| filtered_df             | Reactive calc | `@reactive.calc`                                                               | input_region, processed_df                    | #1, #2, #3 |
-+-------------------------+---------------+--------------------------------------------------------------------------------+-----------------------------------------------+------------+
-| regional_summary        | Reactive calc | `@reactive.calc`                                                               | filtered_df, input_completion_levels          | #1, #2     |
-+-------------------------+---------------+--------------------------------------------------------------------------------+-----------------------------------------------+------------+
-| output_insight_card     | Output        | \@render.ui                                                                    | regional_summary                              | #1         |
-+-------------------------+---------------+--------------------------------------------------------------------------------+-----------------------------------------------+------------+
-| output_world_map        | Output        | \@render_plotly (choropleth)                                                   | processed_df, input_map_metric, input_regions | #3         |
-+-------------------------+---------------+--------------------------------------------------------------------------------+-----------------------------------------------+------------+
-| output_completion_chart | Output        | \@render.plot (diverging bar chart)                                            | regional_summary                              | #1, #2     |
-+-------------------------+---------------+--------------------------------------------------------------------------------+-----------------------------------------------+------------+
-| output_literacy_scatter | Output        | \@render.plot (scatter plot)                                                   | filtered_df                                   | #1, #2     |
-+-------------------------+---------------+--------------------------------------------------------------------------------+-----------------------------------------------+------------+
-| output_tbl              | Output        | \@render.data_frame                                                            | filtered_df                                   | #1, #2, #3 |
-+-------------------------+---------------+--------------------------------------------------------------------------------+-----------------------------------------------+------------+
+| ID | Type | Shiny widget / renderer | Depends on | Job story |
+|----|------|--------------------------|------------|-----------|
+| `input_region` | Input | `ui.input_checkbox_group()` | — | #1, #2, #3 |
+| `apply_filters` | Input | `ui.input_action_button("Apply Filters")` | — | #1, #2, #3 |
+| `input_map_metric` | Input | `ui.input_select()` (grouped by theme) | — | #3 |
+| `processed_df` | Reactive calc | `@reactive.Calc` | — | #1, #2, #3 |
+| `filtered_df` | Reactive calc | `@reactive.Calc` + `@reactive.event(input.apply_filters)` | `processed_df`, `input_region`, `apply_filters` | #1, #2, #3 |
+| `sex_completion_rate_df` | Reactive calc | `@reactive.Calc` (melt + group mean by Sex & Education_Level) | `filtered_df` | #1, #2 |
+| `world_map` | Output | `@render_widget` (Plotly choropleth) | `filtered_df`, `input_map_metric` | #3 |
+| `literacy_scatterplot` | Output | `@render_plotly` (scatter plot) | `filtered_df` | #1, #2 |
+| `education_level_by_gender_bar` | Output | `@render_plotly` (grouped bar chart) | `sex_completion_rate_df` | #1, #2 |
+| `elementary_completion_box` | Output | `@render.ui` (value_box KPI) | `sex_completion_rate_df` | #1, #2 |
+| `el_completion_rate_gender_difference_box` | Output | `@render.ui` (value_box KPI) | `sex_completion_rate_df` | #2 |
+| `tbl` | Output | `@render.data_frame` (DataGrid) | `filtered_df`, `input_map_metric` | #1, #2, #3 |
 
 ### 2.3 Reactivity Diagram
 
-Draw your planned reactive graph as a [Mermaid](https://mermaid.js.org/) flowchart using the notation from Lecture 3:
-
--   `[/Input/]` (Parallelogram) (or `[Input]` Rectangle) = reactive input
--   Hexagon `{{Name}}` = `@reactive.calc` expression
--   Stadium `([Name])` (or Circle) = rendered output
-
-Example:
-
-```` markdown
 ```mermaid
 flowchart TD
-    A[input_region] --> B{{filtered_df}}
-    C[input_map_metric] --> H([output_world_map])
-    A --> H
-    D[input_completion_levels] --> F{{regional_summary}}
-    E{{processed_df}} --> B
-    B --> F
-    E --> H
-    F --> G([output_insight_card])
-    F --> I([output_completion_chart])
-    B --> J([output_literacy_scatter])
-    B --> K([output_tbl])
-```
-````
+    A[input_region] --> C{{filtered_df}}
+    B[apply_filters] --> C
+    D{{processed_df}} --> C
 
-Verify your diagram satisfies the reactivity requirements in Phase 3.2 before you start coding.
+    C --> E{{sex_completion_rate_df}}
+
+    F[input_map_metric] --> G([world_map])
+    C --> G
+
+    C --> H([literacy_scatterplot])
+
+    E --> I([education_level_by_gender_bar])
+    E --> J([elementary_completion_box])
+    E --> K([el_completion_rate_gender_difference_box])
+
+    F --> L([tbl])
+    C --> L
+```
 
 ### 2.4 Calculation Details
 
-For each `@reactive.calc` in your diagram, briefly describe:
-
--   Which inputs it depends on.
--   What transformation it performs (e.g., "filters rows to the selected year range and region(s)").
--   Which outputs consume it.
-
 1.  **processed_df**
 
-    -   The only input is the original data frame; however, additional columns will be added as follows:
+	•	Inputs: none (uses the globally loaded df)
 
-        -   Literacy_Gap = **Youth_15_24_Literacy_Rate_Male-Youth_15_24_Literacy_Rate_Female**
+	•	Transformation: returns a copy of the processed dataset (df.copy()), no additional derived columns created in this step in the current code.
 
-        -   Completion_Gap\_\*\*\* = Completion_Rate\_\*\*\***\_Male - Completion_Rate\_**\*\*\*\_Female
+	•	Consumed by: filtered_df
 
-            -   \*\*\* : Primary/Lower_Secondary/Upper_Secondary
+3.  **filtered_df**
 
-        -   Aggregates (regardless of genders) = (Completion_Rate\_\*\*\***\_Male + Completion_Rate\_**\*\*\*\_Female)/2
+	•	Inputs: processed_df, input_region, and event trigger apply_filters
 
-    <!-- -->
+	•	Transformation: on clicking “Apply Filters”, filters rows to Region values selected in input_region. If no regions selected, returns the unfiltered dataset.
 
-    -   The result is consumed by filtered_df and output_world_map
+	•	Consumed by: world_map, literacy_scatterplot, tbl, sex_completion_rate_df
 
-2.  **filtered_df**
+5.  **sex_completion_rate_df**
 
-    -   The inputs are processed_df and input_regions
+	•	Inputs: filtered_df
 
-    -   The transformation is to filter rows to only countries in the selected regions. All the columns remain
+	•	Transformation: selects completion rate columns by sex and education level, melts into long format, extracts Sex and Education_Level, and groups by (Sex, Education_Level) and computes mean completion rate
 
-    -   The result is consumed by output_literacy_scatter, output_tbl, and regional_summary
-
-3.  **regional_summary**
-
-    -   The inputs are filtered_df and input_completion_levels
-
-    -   The transformation is to summarize statistics for selected regions such as means/medians/standard deviations
-
-    -   The result is consumed by output_completion_chart (diverging bar chart) and output_insight_card (KPI report)
+	•	Consumed by: education_level_by_gender_bar, elementary_completion_box, el_completion_rate_gender_difference_box
