@@ -21,13 +21,36 @@ import pycountry
 df = pd.read_csv("data/processed/processed_global_education.csv", encoding='latin-1')
 world_avg_el_completion_rate = df[["Completion_Rate_Primary_Male", "Completion_Rate_Primary_Female",]].mean().mean()
 
-def kpi_caption(cmp):
-    """Delta badge + five-state label rendered below the value."""
+def kpi1_caption(rate):
+    """Create caption for primary completion rate KPI"""
+
+    rate_diff = rate - world_avg_el_completion_rate
+
+    if rate_diff >= 0:
+        caption_str = f"Completion rate is {rate_diff:.1f} % above world average {world_avg_el_completion_rate:.1f} %"
+    else:
+        caption_str = f"Completion rate is {-rate_diff:.1f} % below world average {world_avg_el_completion_rate:.1f} %"
+
     return ui.tags.div(
-        # bold first line: absolute + relative delta, e.g. "+5.6 (+24.3%) vs overall avg"
-        ui.HTML(f'<strong style="opacity:0.9">{cmp["badge"]}</strong>'),
-        # dimmer second line: human-readable state, e.g. "significantly above avg"
-        ui.div(cmp.get("label", ""), style="opacity:0.7;font-size:0.8rem;margin-top:2px"),
+        ui.HTML(f'<strong style="opacity:0.9">{caption_str}</strong>'),
+    )
+
+def kpi2_caption(rate_diff):
+    """Create caption for primary completion rate gender difference KPI"""
+
+    if rate_diff < -2:
+        caption_str = "Male completion rate is more than 2 percentage points below female"
+    elif rate_diff < -1:
+        caption_str = "Male completion rate is more than 1 percentage point below female"
+    elif rate_diff < 1:
+        caption_str = "Completion rates are within 1 percentage point"
+    elif rate_diff < 2:
+        caption_str = "Female completion rate is more than 1 percentage point below male"
+    else:
+        caption_str = "Female completion rate is more than 2 percentage points below male"
+
+    return ui.tags.div(
+        ui.HTML(f'<strong style="opacity:0.9">{caption_str}</strong>'),
     )
 
 app_ui = ui.page_fluid(
@@ -225,60 +248,6 @@ def server(input, output, session):
         )
 
         return d
-    
-    # @reactive.Calc
-    # def completion_rate_df():
-    #     """Group columns with data about education level completion by region.
-
-    #     This makes it possible create KPIs boxes.
-            
-    #     Parameters
-    #     ----------
-    #     None
-
-    #     Returns
-    #     -------
-    #     pd.Dataframe
-    #         The grouped dataframe
-    #     """
-    #     d = filtered_df().copy()
-    
-    #     d = d[[
-    #             "Completion_Rate_Primary_Male",
-    #             "Completion_Rate_Primary_Female",
-    #             "Completion_Rate_Lower_Secondary_Male",
-    #             "Completion_Rate_Lower_Secondary_Female",
-    #             "Completion_Rate_Upper_Secondary_Male",
-    #             "Completion_Rate_Upper_Secondary_Female",
-    #             "Region",
-    #             "iso3"
-    #         ]]
-    #     d = pd.melt(
-    #         d, 
-    #         id_vars=["Region", "iso3"], 
-    #         value_vars=[
-    #             "Completion_Rate_Primary_Male",
-    #             "Completion_Rate_Primary_Female",
-    #             "Completion_Rate_Lower_Secondary_Male",
-    #             "Completion_Rate_Lower_Secondary_Female",
-    #             "Completion_Rate_Upper_Secondary_Male",
-    #             "Completion_Rate_Upper_Secondary_Female",
-    #         ],
-    #         value_name="Completion_Rate",
-    #         var_name="Completion_Rate_Group",
-    #         ignore_index=True
-    #         )
-    #     d["Sex"] = d["Completion_Rate_Group"].str.split("_").str[-1]
-    #     d["Education_Level"] = d["Completion_Rate_Group"].str.split("_").str[2:-1].str.join(" ")
-    
-    #     d = (
-    #         d[["Region", "Sex", "Education_Level", "Completion_Rate"]]
-    #         .groupby(["Region", "Sex", "Education_Level"])
-    #         .mean()
-    #         .reset_index()
-    #     )
-
-    #     return d
 
     # 3) Create object to display
     @output
@@ -318,7 +287,6 @@ def server(input, output, session):
 
         return fig
     
-
     @output
     @render_plotly
     def literacy_scatterplot():
@@ -392,8 +360,6 @@ def server(input, output, session):
             height="300px"
         )
 
-
-
     @output
     @render_plotly
     def education_level_by_gender_bar():
@@ -438,9 +404,19 @@ def server(input, output, session):
             .loc["Primary"]
             .values[0]
         )
+
+        if np.abs(avg_comp_rate) < 70:
+            rate_theme = "danger"
+        elif np.abs(avg_comp_rate) < 90:
+            rate_theme = "warning"
+        else:
+            rate_theme = "success"
+
         return ui.value_box(
             "Rate", 
             f"{avg_comp_rate:.1f} %", 
+            kpi1_caption(avg_comp_rate),
+            theme=rate_theme
         )
     
     @render.ui
@@ -458,9 +434,18 @@ def server(input, output, session):
         )
         comp_rate_diff = male_comp_rate - female_comp_rate
 
+        if np.abs(comp_rate_diff) > 2:
+            diff_theme = "danger"
+        elif np.abs(comp_rate_diff) > 1:
+            diff_theme = "warning"
+        else:
+            diff_theme = "success"
+
         return ui.value_box(
-            "Male rate minus female rate", 
+            "Difference between male rate and female rate", 
             f"{comp_rate_diff:.1f} %", 
+            kpi2_caption(comp_rate_diff),
+            theme=diff_theme
         )
 
 app = App(app_ui, server)
