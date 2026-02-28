@@ -10,60 +10,43 @@
 
 ### 2.2 Component Inventory
 
-Plan every input, reactive calc, and output your app will have. Use this as a checklist during Phase 3. Minimum **2 components per team member** (6 for a 3-person team, 8 for a 4-person team), with **at least 2 inputs and 2 outputs**:
-
-+-------------------------+---------------+--------------------------------------------------------------------------------+-----------------------------------------------+------------+
-| ID                      | Type          | Shiny widget / renderer                                                        | Depends on                                    | Job story  |
-+=========================+===============+================================================================================+===============================================+============+
-| input_region            | Input         | ui.input_selectize(multiple=True)                                              | \-                                            | #1, #2, #3 |
-+-------------------------+---------------+--------------------------------------------------------------------------------+-----------------------------------------------+------------+
-| input_map_metric        | Input         | ui.input_select() (grouped by theme: Access / Completion / Learning / Context) | \-                                            | #3         |
-+-------------------------+---------------+--------------------------------------------------------------------------------+-----------------------------------------------+------------+
-| input_completion_levels | Input         | ui.input_checkbox_group() (Primary / Lower / Upper Secondary)                  | \-                                            | #1, #2     |
-+-------------------------+---------------+--------------------------------------------------------------------------------+-----------------------------------------------+------------+
-| processed_df            | Reactive calc | `@reactive.calc`                                                               | \-                                            | #1, #2, #3 |
-+-------------------------+---------------+--------------------------------------------------------------------------------+-----------------------------------------------+------------+
-| filtered_df             | Reactive calc | `@reactive.calc`                                                               | input_region, processed_df                    | #1, #2, #3 |
-+-------------------------+---------------+--------------------------------------------------------------------------------+-----------------------------------------------+------------+
-| regional_summary        | Reactive calc | `@reactive.calc`                                                               | filtered_df, input_completion_levels          | #1, #2     |
-+-------------------------+---------------+--------------------------------------------------------------------------------+-----------------------------------------------+------------+
-| output_insight_card     | Output        | \@render.ui                                                                    | regional_summary                              | #1         |
-+-------------------------+---------------+--------------------------------------------------------------------------------+-----------------------------------------------+------------+
-| output_world_map        | Output        | \@render_plotly (choropleth)                                                   | processed_df, input_map_metric, input_regions | #3         |
-+-------------------------+---------------+--------------------------------------------------------------------------------+-----------------------------------------------+------------+
-| output_completion_chart | Output        | \@render.plot (diverging bar chart)                                            | regional_summary                              | #1, #2     |
-+-------------------------+---------------+--------------------------------------------------------------------------------+-----------------------------------------------+------------+
-| output_literacy_scatter | Output        | \@render.plot (scatter plot)                                                   | filtered_df                                   | #1, #2     |
-+-------------------------+---------------+--------------------------------------------------------------------------------+-----------------------------------------------+------------+
-| output_tbl              | Output        | \@render.data_frame                                                            | filtered_df                                   | #1, #2, #3 |
-+-------------------------+---------------+--------------------------------------------------------------------------------+-----------------------------------------------+------------+
+| ID | Type | Shiny widget / renderer | Depends on | Job story |
+|----|------|--------------------------|------------|-----------|
+| `input_region` | Input | `ui.input_checkbox_group()` | — | #1, #2, #3 |
+| `apply_filters` | Input | `ui.input_action_button("Apply Filters")` | — | #1, #2, #3 |
+| `input_map_metric` | Input | `ui.input_select()` (grouped by theme) | — | #3 |
+| `processed_df` | Reactive calc | `@reactive.Calc` | — | #1, #2, #3 |
+| `filtered_df` | Reactive calc | `@reactive.Calc` + `@reactive.event(input.apply_filters)` | `processed_df`, `input_region`, `apply_filters` | #1, #2, #3 |
+| `sex_completion_rate_df` | Reactive calc | `@reactive.Calc` (melt + group mean by Sex & Education_Level) | `filtered_df` | #1, #2 |
+| `world_map` | Output | `@render_widget` (Plotly choropleth) | `filtered_df`, `input_map_metric` | #3 |
+| `literacy_scatterplot` | Output | `@render_plotly` (scatter plot) | `filtered_df` | #1, #2 |
+| `education_level_by_gender_bar` | Output | `@render_plotly` (grouped bar chart) | `sex_completion_rate_df` | #1, #2 |
+| `elementary_completion_box` | Output | `@render.ui` (value_box KPI) | `sex_completion_rate_df` | #1, #2 |
+| `el_completion_rate_gender_difference_box` | Output | `@render.ui` (value_box KPI) | `sex_completion_rate_df` | #2 |
+| `tbl` | Output | `@render.data_frame` (DataGrid) | `filtered_df`, `input_map_metric` | #1, #2, #3 |
 
 ### 2.3 Reactivity Diagram
 
-Draw your planned reactive graph as a [Mermaid](https://mermaid.js.org/) flowchart using the notation from Lecture 3:
-
--   `[/Input/]` (Parallelogram) (or `[Input]` Rectangle) = reactive input
--   Hexagon `{{Name}}` = `@reactive.calc` expression
--   Stadium `([Name])` (or Circle) = rendered output
-
-Example:
-
-```` markdown
 ```mermaid
 flowchart TD
-    A[input_region] --> B{{filtered_df}}
-    C[input_map_metric] --> H([output_world_map])
-    A --> H
-    D[input_completion_levels] --> F{{regional_summary}}
-    E{{processed_df}} --> B
-    B --> F
-    E --> H
-    F --> G([output_insight_card])
-    F --> I([output_completion_chart])
-    B --> J([output_literacy_scatter])
-    B --> K([output_tbl])
+    A[input_region] --> C{{filtered_df}}
+    B[apply_filters] --> C
+    D{{processed_df}} --> C
+
+    C --> E{{sex_completion_rate_df}}
+
+    F[input_map_metric] --> G([world_map])
+    C --> G
+
+    C --> H([literacy_scatterplot])
+
+    E --> I([education_level_by_gender_bar])
+    E --> J([elementary_completion_box])
+    E --> K([el_completion_rate_gender_difference_box])
+
+    F --> L([tbl])
+    C --> L
 ```
-````
 
 Verify your diagram satisfies the reactivity requirements in Phase 3.2 before you start coding.
 
