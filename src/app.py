@@ -54,6 +54,9 @@ def kpi2_caption(rate_diff):
     )
 
 app_ui = ui.page_fluid(
+    ui.tags.head(
+        ui.tags.title("World Education Dashboard")
+    ),
     ui.h2("World Education Dashboard"),
     ui.layout_sidebar(
         ui.sidebar(
