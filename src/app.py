@@ -19,6 +19,16 @@ import pycountry
 #data_path = Path(__file__).resolve().parent.parent / "data" / "raw" / "Global_education.csv"
 #df = pd.read_csv(data_path, encoding="latin-1")
 df = pd.read_csv("data/processed/processed_global_education.csv", encoding='latin-1')
+world_avg_el_completion_rate = df[["Completion_Rate_Primary_Male", "Completion_Rate_Primary_Female",]].mean().mean()
+
+def kpi_caption(cmp):
+    """Delta badge + five-state label rendered below the value."""
+    return ui.tags.div(
+        # bold first line: absolute + relative delta, e.g. "+5.6 (+24.3%) vs overall avg"
+        ui.HTML(f'<strong style="opacity:0.9">{cmp["badge"]}</strong>'),
+        # dimmer second line: human-readable state, e.g. "significantly above avg"
+        ui.div(cmp.get("label", ""), style="opacity:0.7;font-size:0.8rem;margin-top:2px"),
+    )
 
 app_ui = ui.page_fluid(
     ui.h2("World Education Dashboard"),
@@ -31,17 +41,6 @@ app_ui = ui.page_fluid(
                     "Select Region:",
                     choices=["North America", "South America", "Europe", "Asia", "Africa", "Oceania"],
                 ),
-                
-                # ui.input_checkbox_group(
-                #     "input_completion_levels",
-                #     "Completion Level",
-                #     choices={
-                #         "Primary": "Primary",
-                #         "Lower_Secondary": "Lower secondary",
-                #         "Upper_Secondary": "Upper secondary",
-                #     },
-                #     selected=["Primary", "Lower_Secondary", "Upper_Secondary"],
-                # ),
                 ui.input_action_button("apply_filters", "Apply Filters", class_="btn-primary w-100"),
             ),
             width=300,
@@ -104,8 +103,13 @@ app_ui = ui.page_fluid(
                     full_screen=True,
                 ),
                 ui.card(
-                    ui.card_header("SOME KPI"),
-                    
+                    ui.card_header("Primary School Completion"),
+                    ui.layout_column_wrap(
+                        ui.output_ui("elementary_completion_box"),
+                        ui.output_ui("el_completion_rate_gender_difference_box"),
+                        fill=False,
+                        width=1,
+                    ),
                 ),
                 width=1/3
             ),
@@ -169,7 +173,7 @@ def server(input, output, session):
         return d
     
     @reactive.Calc
-    def melted_completion_df():
+    def sex_completion_rate_df():
         """Melt columns with data about education level completion.
 
         This makes it possible create education_level_by_gender_bar bar plot.
@@ -221,6 +225,60 @@ def server(input, output, session):
         )
 
         return d
+    
+    # @reactive.Calc
+    # def completion_rate_df():
+    #     """Group columns with data about education level completion by region.
+
+    #     This makes it possible create KPIs boxes.
+            
+    #     Parameters
+    #     ----------
+    #     None
+
+    #     Returns
+    #     -------
+    #     pd.Dataframe
+    #         The grouped dataframe
+    #     """
+    #     d = filtered_df().copy()
+    
+    #     d = d[[
+    #             "Completion_Rate_Primary_Male",
+    #             "Completion_Rate_Primary_Female",
+    #             "Completion_Rate_Lower_Secondary_Male",
+    #             "Completion_Rate_Lower_Secondary_Female",
+    #             "Completion_Rate_Upper_Secondary_Male",
+    #             "Completion_Rate_Upper_Secondary_Female",
+    #             "Region",
+    #             "iso3"
+    #         ]]
+    #     d = pd.melt(
+    #         d, 
+    #         id_vars=["Region", "iso3"], 
+    #         value_vars=[
+    #             "Completion_Rate_Primary_Male",
+    #             "Completion_Rate_Primary_Female",
+    #             "Completion_Rate_Lower_Secondary_Male",
+    #             "Completion_Rate_Lower_Secondary_Female",
+    #             "Completion_Rate_Upper_Secondary_Male",
+    #             "Completion_Rate_Upper_Secondary_Female",
+    #         ],
+    #         value_name="Completion_Rate",
+    #         var_name="Completion_Rate_Group",
+    #         ignore_index=True
+    #         )
+    #     d["Sex"] = d["Completion_Rate_Group"].str.split("_").str[-1]
+    #     d["Education_Level"] = d["Completion_Rate_Group"].str.split("_").str[2:-1].str.join(" ")
+    
+    #     d = (
+    #         d[["Region", "Sex", "Education_Level", "Completion_Rate"]]
+    #         .groupby(["Region", "Sex", "Education_Level"])
+    #         .mean()
+    #         .reset_index()
+    #     )
+
+    #     return d
 
     # 3) Create object to display
     @output
@@ -351,7 +409,7 @@ def server(input, output, session):
             Plotly express bar plot object.
         
         """
-        d = melted_completion_df()
+        d = sex_completion_rate_df()
 
         fig = px.bar(
             d,
@@ -371,6 +429,38 @@ def server(input, output, session):
 
         return fig
 
+    @render.ui
+    def elementary_completion_box():
+        avg_comp_rate = (
+            sex_completion_rate_df()[["Education_Level", "Completion_Rate"]]
+            .groupby(["Education_Level"])
+            .mean()
+            .loc["Primary"]
+            .values[0]
+        )
+        return ui.value_box(
+            "Rate", 
+            f"{avg_comp_rate:.1f} %", 
+        )
     
+    @render.ui
+    def el_completion_rate_gender_difference_box():
+        df = sex_completion_rate_df().copy()
+        male_comp_rate = (
+            df[(df["Sex"]=="Male") & (df["Education_Level"]=="Primary")]
+            .loc[:,"Completion_Rate"]
+            .values[0]
+        )
+        female_comp_rate = (
+            df[(df["Sex"]=="Female") & (df["Education_Level"]=="Primary")]
+            .loc[:,"Completion_Rate"]
+            .values[0]
+        )
+        comp_rate_diff = male_comp_rate - female_comp_rate
+
+        return ui.value_box(
+            "Male rate minus female rate", 
+            f"{comp_rate_diff:.1f} %", 
+        )
 
 app = App(app_ui, server)
