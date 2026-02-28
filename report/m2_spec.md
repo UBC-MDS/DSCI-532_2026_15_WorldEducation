@@ -2,29 +2,11 @@
 
 ### 2.1 Updated Job Stories
 
-Review your M1 job stories in light of your deployment setup and any new insights. Update or add stories as needed, and track their status:
-
-+-------+------------------------------------------------------------------------------------------------------------------------------------------------+---------+-------+
-| \#    | Job Story                                                                                                                                      | Status  | Notes |
-+=======+================================================================================================================================================+=========+=======+
-| 1     | **Situation:** When I am evaluating the overall performance of education systems across countries,                                             | Pending |       |
-|       |                                                                                                                                                |         |       |
-|       | **Motivation:** I want to compare key education indicators such as completion rates and literacy rates across regions,                         |         |       |
-|       |                                                                                                                                                |         |       |
-|       | **Outcome:** so I can identify which regions are lagging behind and require targeted policy attention.                                         |         |       |
-+-------+------------------------------------------------------------------------------------------------------------------------------------------------+---------+-------+
-| 2     | **Situation:** When designing policies to bridge gender inequality in education,                                                               | Pending |       |
-|       |                                                                                                                                                |         |       |
-|       | **Motivation:** I want to compare different education variables separately for male and female students across different education levels      |         |       |
-|       |                                                                                                                                                |         |       |
-|       | **Outcome:** so I can identify gender-based disparities and design policies that promote equal access to education.                            |         |       |
-+-------+------------------------------------------------------------------------------------------------------------------------------------------------+---------+-------+
-| 3     | **Situation:** When I am reviewing large-scale global education data,                                                                          | Pending |       |
-|       |                                                                                                                                                |         |       |
-|       | **Motivation:** I want to visualize education indicators on a global heat map,                                                                 |         |       |
-|       |                                                                                                                                                |         |       |
-|       | **Outcome:** so I can quickly detect global patterns, trends, and outlier countries that require further investigation or policy intervention. |         |       |
-+-------+------------------------------------------------------------------------------------------------------------------------------------------------+---------+-------+
+| #   | Job Story                                                                                                                                                   | Status         | Notes                                                              |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | ------------------------------------------------------------------ |
+| 1   | When I am evaluating the overall performance of education systems across countries, I want to compare key education indicators such as completion rates and literacy rates across regions, so I can identify which regions are lagging behind and require targeted policy attention.     | ✅ Implemented |                                                                    |
+| 2   | When designing policies to bridge gender inequality in education, I want to compare different education variables separately for male and female students across different education levels, so I can identify gender-based disparities and design policies that promote equal access to education.                | ✅ Implemented |                                                                    |
+| 3   | When I am reviewing large-scale global education data, I want to visualize education indicators on a choropleth, so I can quickly detect global patterns, trends, and outlier countries that require further investigation or policy intervention.   | ✅ Implemented |                                                                    |
 
 ### 2.2 Component Inventory
 
