@@ -330,20 +330,24 @@ def server(input, output, session):
             }
         )
 
+        xy_min = d[["Youth_15_24_Literacy_Rate_Male", "Youth_15_24_Literacy_Rate_Female"]].min().min() - 5
+        xy_max = d[["Youth_15_24_Literacy_Rate_Male", "Youth_15_24_Literacy_Rate_Female"]].max().max() + 5
+
         # Add 45-degree diagonal line (y = x)
         fig.add_shape(
             type="line",
-            x0=0, y0=0,
-            x1=100, y1=100,
+            x0=-10, y0=-10,
+            x1=110, y1=110,
             line=dict(color="black", dash="dash")
         )
 
         # Tidy axis
-        fig.update_xaxes(dtick=20)
-        fig.update_yaxes(dtick=20)
+        fig.update_xaxes(dtick=10)
+        fig.update_yaxes(dtick=10)
+        
         fig.update_layout(
-            xaxis=dict(range=[1, 100]),  # x scale follows y
-            yaxis=dict(range=[1, 100])
+            xaxis=dict(range=[xy_min, xy_max]),  # x scale follows y
+            yaxis=dict(range=[xy_min, xy_max])
         )
 
         return fig
