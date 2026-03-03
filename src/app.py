@@ -57,95 +57,105 @@ app_ui = ui.page_fluid(
     ui.tags.head(
         ui.tags.title("World Education Dashboard")
     ),
-    ui.h2("World Education Dashboard"),
-    ui.layout_sidebar(
-        ui.sidebar(
-            ui.card(
-                ui.card_header("Filters"),
-                ui.input_checkbox_group(
-                    "input_region",
-                    "Select Region:",
-                    choices=["North America", "South America", "Europe", "Asia", "Africa", "Oceania"],
+    ui.navset_tab(
+        ui.nav_panel(
+            "Main Dashboard",
+            ui.h2("World Education Dashboard"),
+            ui.layout_sidebar(
+                ui.sidebar(
+                    ui.card(
+                        ui.card_header("Filters"),
+                        ui.input_checkbox_group(
+                            "input_region",
+                            "Select Region:",
+                            choices=["North America", "South America", "Europe", "Asia", "Africa", "Oceania"],
+                        ),
+                        ui.input_action_button("apply_filters", "Apply Filters", class_="btn-primary w-100"),
+                    ),
+                    width=300,
                 ),
-                ui.input_action_button("apply_filters", "Apply Filters", class_="btn-primary w-100"),
-            ),
-            width=300,
-        ),
 
-        ui.layout_column_wrap(
-            ui.layout_column_wrap(
-                ui.card(
-                    ui.card_header("Global Education Indicators Map"),
-                    ui.input_select(
-                    "input_map_metric",
-                    "Map metric",
-                        {
-                            "Access": {
-                                "OOSR_Avg_Primary": "Out-of-school rate (Primary, avg)",
-                                "OOSR_Avg_Lower_Secondary": "Out-of-school rate (Lower secondary, avg)",
-                                "OOSR_Avg_Upper_Secondary": "Out-of-school rate (Upper secondary, avg)",
-                                "OOSR_Gap_Primary": "Out-of-school rate gender gap (Primary)",
-                                "OOSR_Gap_Lower_Secondary": "Out-of-school rate gender gap (Lower secondary)",
-                                "OOSR_Gap_Upper_Secondary": "Out-of-school rate gender gap (Upper secondary)",
-                                "Gross_Primary_Education_Enrollment": "Gross primary enrollment",
-                                "Gross_Tertiary_Education_Enrollment": "Gross tertiary enrollment",
-                            },
-                            "Completion": {
-                                "Completion_Avg_Primary": "Completion rate (Primary, avg)",
-                                "Completion_Avg_Lower_Secondary": "Completion rate (Lower secondary, avg)",
-                                "Completion_Avg_Upper_Secondary": "Completion rate (Upper secondary, avg)",
-                                "Completion_Gap_Primary": "Completion rate gender gap (Primary)",
-                                "Completion_Gap_Lower_Secondary": "Completion rate gender gap (Lower secondary)",
-                                "Completion_Gap_Upper_Secondary": "Completion rate gender gap (Upper secondary)",
-                            },
-                            "Learning": {
-                                "Grade_2_3_Proficiency_Reading": "Grade 2–3 proficiency (Reading)",
-                                "Grade_2_3_Proficiency_Math": "Grade 2–3 proficiency (Math)",
-                                "Primary_End_Proficiency_Reading": "Primary end proficiency (Reading)",
-                                "Primary_End_Proficiency_Math": "Primary end proficiency (Math)",
-                                "Lower_Secondary_End_Proficiency_Reading": "Lower secondary end proficiency (Reading)",
-                                "Lower_Secondary_End_Proficiency_Math": "Lower secondary end proficiency (Math)",
-                            },
-                            "Context": {
-                                "Youth_15_24_Literacy_Rate_Male": "Youth literacy rate (Male)",
-                                "Youth_15_24_Literacy_Rate_Female": "Youth literacy rate (Female)",
-                                "Literacy_Gap": "Youth literacy gender gap (Male - Female)",
-                                "Birth_Rate": "Birth rate",
-                                "Unemployment_Rate": "Unemployment rate",
-                            },
-                        },
-                    ),
-                    output_widget("world_map"),
-                ),
-            ),
-            ui.layout_column_wrap(
-                ui.card(
-                    ui.card_header("Education Level by Sex"),
-                    output_widget("education_level_by_gender_bar"),
-                ),
-                ui.card(
-                    ui.card_header("Literacy Rate by Sex"),
-                    output_widget("literacy_scatterplot"),
-                    full_screen=True,
-                ),
-                ui.card(
-                    ui.card_header("Primary School Completion"),
+                ui.layout_column_wrap(
                     ui.layout_column_wrap(
-                        ui.output_ui("elementary_completion_box"),
-                        ui.output_ui("el_completion_rate_gender_difference_box"),
-                        fill=False,
-                        width=1,
+                        ui.card(
+                            ui.card_header("Global Education Indicators Map"),
+                            ui.input_select(
+                            "input_map_metric",
+                            "Map metric",
+                                {
+                                    "Access": {
+                                        "OOSR_Avg_Primary": "Out-of-school rate (Primary, avg)",
+                                        "OOSR_Avg_Lower_Secondary": "Out-of-school rate (Lower secondary, avg)",
+                                        "OOSR_Avg_Upper_Secondary": "Out-of-school rate (Upper secondary, avg)",
+                                        "OOSR_Gap_Primary": "Out-of-school rate gender gap (Primary)",
+                                        "OOSR_Gap_Lower_Secondary": "Out-of-school rate gender gap (Lower secondary)",
+                                        "OOSR_Gap_Upper_Secondary": "Out-of-school rate gender gap (Upper secondary)",
+                                        "Gross_Primary_Education_Enrollment": "Gross primary enrollment",
+                                        "Gross_Tertiary_Education_Enrollment": "Gross tertiary enrollment",
+                                    },
+                                    "Completion": {
+                                        "Completion_Avg_Primary": "Completion rate (Primary, avg)",
+                                        "Completion_Avg_Lower_Secondary": "Completion rate (Lower secondary, avg)",
+                                        "Completion_Avg_Upper_Secondary": "Completion rate (Upper secondary, avg)",
+                                        "Completion_Gap_Primary": "Completion rate gender gap (Primary)",
+                                        "Completion_Gap_Lower_Secondary": "Completion rate gender gap (Lower secondary)",
+                                        "Completion_Gap_Upper_Secondary": "Completion rate gender gap (Upper secondary)",
+                                    },
+                                    "Learning": {
+                                        "Grade_2_3_Proficiency_Reading": "Grade 2–3 proficiency (Reading)",
+                                        "Grade_2_3_Proficiency_Math": "Grade 2–3 proficiency (Math)",
+                                        "Primary_End_Proficiency_Reading": "Primary end proficiency (Reading)",
+                                        "Primary_End_Proficiency_Math": "Primary end proficiency (Math)",
+                                        "Lower_Secondary_End_Proficiency_Reading": "Lower secondary end proficiency (Reading)",
+                                        "Lower_Secondary_End_Proficiency_Math": "Lower secondary end proficiency (Math)",
+                                    },
+                                    "Context": {
+                                        "Youth_15_24_Literacy_Rate_Male": "Youth literacy rate (Male)",
+                                        "Youth_15_24_Literacy_Rate_Female": "Youth literacy rate (Female)",
+                                        "Literacy_Gap": "Youth literacy gender gap (Male - Female)",
+                                        "Birth_Rate": "Birth rate",
+                                        "Unemployment_Rate": "Unemployment rate",
+                                    },
+                                },
+                            ),
+                            output_widget("world_map"),
+                        ),
                     ),
+                    ui.layout_column_wrap(
+                        ui.card(
+                            ui.card_header("Education Level by Sex"),
+                            output_widget("education_level_by_gender_bar"),
+                        ),
+                        ui.card(
+                            ui.card_header("Literacy Rate by Sex"),
+                            output_widget("literacy_scatterplot"),
+                            full_screen=True,
+                        ),
+                        ui.card(
+                            ui.card_header("Primary School Completion"),
+                            ui.layout_column_wrap(
+                                ui.output_ui("elementary_completion_box"),
+                                ui.output_ui("el_completion_rate_gender_difference_box"),
+                                fill=False,
+                                width=1,
+                            ),
+                        ),
+                        width=1/3
+                    ),
+                    ui.card(
+                        ui.card_header("Data Table"),
+                        ui.output_data_frame("tbl"),
+                        ),
+                    width=1,
+                    heights_equal="row",
                 ),
-                width=1/3
             ),
-            ui.card(
-                ui.card_header("Data Table"),
-                ui.output_data_frame("tbl"),
-                ),
-            width=1,
-            heights_equal="row",
         ),
+        ui.nav_panel(
+            "Query with Chat",
+            "LLM query and plots"
+            # ADD LAYOUT HERE
+        )
     ),
 )
 
