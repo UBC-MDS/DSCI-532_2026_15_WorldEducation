@@ -325,8 +325,8 @@ def server(input, output, session):
             color_discrete_sequence=px.colors.qualitative.Set2,
             labels={
                 "Region": "Region",
-                "Youth_15_24_Literacy_Rate_Male": " Male Literacy Rate",
-                "Youth_15_24_Literacy_Rate_Female": "Female Literacy Rate",
+                "Youth_15_24_Literacy_Rate_Male": " Male Literacy Rate (%)",
+                "Youth_15_24_Literacy_Rate_Female": "Female Literacy Rate (%)",
             }
         )
 
