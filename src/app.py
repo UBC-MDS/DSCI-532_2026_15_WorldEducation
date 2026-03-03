@@ -397,9 +397,15 @@ def server(input, output, session):
         )
 
         # Tidy axis
-        fig.update_xaxes(dtick=10)
-        fig.update_yaxes(dtick=10)
-        
+        axis_range = xy_max-xy_min
+        if axis_range < 15:
+            tick_size = 2
+        elif axis_range < 40:
+            tick_size = 5
+        else:
+            tick_size = 10
+        fig.update_xaxes(dtick=tick_size)
+        fig.update_yaxes(dtick=tick_size)
         fig.update_layout(
             xaxis=dict(range=[xy_min, xy_max]),  # x scale follows y
             yaxis=dict(range=[xy_min, xy_max])
@@ -489,6 +495,7 @@ def server(input, output, session):
             x = "Education_Level",
             y = "Completion_Rate",
             color = "Region",
+            color_discrete_sequence=px.colors.qualitative.Set2,
             barmode = "group",
             category_orders = {"Education_Level": ["Primary", "Lower Secondary", "Upper Secondary"]},
             labels={
