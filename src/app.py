@@ -123,13 +123,8 @@ app_ui = ui.page_fluid(
                     ),
                     ui.layout_column_wrap(
                         ui.card(
-                            ui.card_header("Education Level by Sex"),
-                            output_widget("education_level_by_gender_bar"),
-                        ),
-                        ui.card(
-                            ui.card_header("Literacy Rate by Sex"),
-                            output_widget("literacy_scatterplot"),
-                            full_screen=True,
+                            ui.card_header("Average Education Level by Region"),
+                            output_widget("education_level_by_region_bar"),
                         ),
                         ui.card(
                             ui.card_header("Primary School Completion"),
@@ -140,7 +135,19 @@ app_ui = ui.page_fluid(
                                 width=1,
                             ),
                         ),
-                        width=1/3
+                        width=1/2
+                    ),
+                    ui.layout_column_wrap(
+                        ui.card(
+                            ui.card_header("Education Level by Sex"),
+                            output_widget("education_level_by_gender_bar"),
+                        ),
+                        ui.card(
+                            ui.card_header("Literacy Rate by Sex"),
+                            output_widget("literacy_scatterplot"),
+                            full_screen=True,
+                        ),
+                        width=1/2
                     ),
                     ui.card(
                         ui.card_header("Data Table"),
@@ -256,6 +263,54 @@ def server(input, output, session):
         d = (
             d[["Sex", "Education_Level", "Completion_Rate"]]
             .groupby(["Sex", "Education_Level"])
+            .mean()
+            .reset_index()
+        )
+
+        return d
+    
+    @reactive.Calc
+    def region_completion_rate_df():
+        """Melt columns with data about education level completion.
+
+        This makes it possible create education_level_by_region_bar bar plot.
+            
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        pd.Dataframe
+            The melted dataframe
+        """
+        d = filtered_df().copy()
+    
+        d = d[[
+                "Completion_Avg_Primary",
+                "Completion_Avg_Lower_Secondary",
+                "Completion_Avg_Upper_Secondary",
+                "Region",
+                "iso3"
+            ]]
+        d = pd.melt(
+            d, 
+            id_vars=["Region", "iso3"], 
+            value_vars=[
+                "Completion_Avg_Primary",
+                "Completion_Avg_Lower_Secondary",
+                "Completion_Avg_Upper_Secondary",
+            ],
+            value_name="Completion_Rate",
+            var_name="Completion_Rate_Group",
+            ignore_index=True
+            )
+
+        d["Education_Level"] = d["Completion_Rate_Group"].str.split("_").str[2:].str.join(" ")
+    
+        d = (
+            d[["Region", "Education_Level", "Completion_Rate"]]
+            .groupby(["Region", "Education_Level"])
             .mean()
             .reset_index()
         )
@@ -399,6 +454,41 @@ def server(input, output, session):
             x = "Education_Level",
             y = "Completion_Rate",
             color = "Sex",
+            barmode = "group",
+            category_orders = {"Education_Level": ["Primary", "Lower Secondary", "Upper Secondary"]},
+            labels={
+                "Education_Level": "Education Level",
+                "Completion_Rate": "Completion Rate (%)"
+            },
+            range_y=[0,100]
+        )
+
+        fig.update_yaxes(dtick=20)
+
+        return fig
+    
+    @output
+    @render_plotly
+    def education_level_by_region_bar():
+        """Create bar plot of education level completed separated by region.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        px.bar
+            Plotly express bar plot object.
+        
+        """
+        d = region_completion_rate_df()
+
+        fig = px.bar(
+            d,
+            x = "Education_Level",
+            y = "Completion_Rate",
+            color = "Region",
             barmode = "group",
             category_orders = {"Education_Level": ["Primary", "Lower Secondary", "Upper Secondary"]},
             labels={
