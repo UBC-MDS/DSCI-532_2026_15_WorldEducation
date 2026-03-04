@@ -527,7 +527,7 @@ def server(input, output, session):
             rate_theme = "success"
 
         return ui.value_box(
-            "Rate", 
+            "Average rate of all selected regions", 
             f"{avg_comp_rate:.1f} %", 
             kpi1_caption(avg_comp_rate),
             theme=rate_theme
