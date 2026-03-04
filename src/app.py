@@ -120,6 +120,7 @@ app_ui = ui.page_fluid(
                             ),
                             output_widget("world_map"),
                         ),
+                        
                     ),
                     ui.layout_column_wrap(
                         ui.card(
@@ -143,7 +144,7 @@ app_ui = ui.page_fluid(
                             output_widget("education_level_by_gender_bar"),
                         ),
                         ui.card(
-                            ui.card_header("Literacy Rate by Sex"),
+                            ui.card_header("Male vs Female Literacy Rate by Region"),
                             output_widget("literacy_scatterplot"),
                             full_screen=True,
                         ),
