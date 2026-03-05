@@ -120,16 +120,12 @@ app_ui = ui.page_fluid(
                             ),
                             output_widget("world_map"),
                         ),
+                        
                     ),
                     ui.layout_column_wrap(
                         ui.card(
-                            ui.card_header("Education Level by Sex"),
-                            output_widget("education_level_by_gender_bar"),
-                        ),
-                        ui.card(
-                            ui.card_header("Literacy Rate by Sex"),
-                            output_widget("literacy_scatterplot"),
-                            full_screen=True,
+                            ui.card_header("Average Education Level by Region"),
+                            output_widget("education_level_by_region_bar"),
                         ),
                         ui.card(
                             ui.card_header("Primary School Completion"),
@@ -140,7 +136,19 @@ app_ui = ui.page_fluid(
                                 width=1,
                             ),
                         ),
-                        width=1/3
+                        width=1/2
+                    ),
+                    ui.layout_column_wrap(
+                        ui.card(
+                            ui.card_header("Education Level by Sex"),
+                            output_widget("education_level_by_gender_bar"),
+                        ),
+                        ui.card(
+                            ui.card_header("Male vs Female Literacy Rate by Region"),
+                            output_widget("literacy_scatterplot"),
+                            full_screen=True,
+                        ),
+                        width=1/2
                     ),
                     ui.card(
                         ui.card_header("Data Table"),
@@ -261,6 +269,54 @@ def server(input, output, session):
         )
 
         return d
+    
+    @reactive.Calc
+    def region_completion_rate_df():
+        """Melt columns with data about education level completion.
+
+        This makes it possible create education_level_by_region_bar bar plot.
+            
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        pd.Dataframe
+            The melted dataframe
+        """
+        d = filtered_df().copy()
+    
+        d = d[[
+                "Completion_Avg_Primary",
+                "Completion_Avg_Lower_Secondary",
+                "Completion_Avg_Upper_Secondary",
+                "Region",
+                "iso3"
+            ]]
+        d = pd.melt(
+            d, 
+            id_vars=["Region", "iso3"], 
+            value_vars=[
+                "Completion_Avg_Primary",
+                "Completion_Avg_Lower_Secondary",
+                "Completion_Avg_Upper_Secondary",
+            ],
+            value_name="Completion_Rate",
+            var_name="Completion_Rate_Group",
+            ignore_index=True
+            )
+
+        d["Education_Level"] = d["Completion_Rate_Group"].str.split("_").str[2:].str.join(" ")
+    
+        d = (
+            d[["Region", "Education_Level", "Completion_Rate"]]
+            .groupby(["Region", "Education_Level"])
+            .mean()
+            .reset_index()
+        )
+
+        return d
 
     # 3) Create object to display
     @output
@@ -325,25 +381,35 @@ def server(input, output, session):
             color_discrete_sequence=px.colors.qualitative.Set2,
             labels={
                 "Region": "Region",
-                "Youth_15_24_Literacy_Rate_Male": " Male Literacy Rate",
-                "Youth_15_24_Literacy_Rate_Female": "Female Literacy Rate",
+                "Youth_15_24_Literacy_Rate_Male": " Male Literacy Rate (%)",
+                "Youth_15_24_Literacy_Rate_Female": "Female Literacy Rate (%)",
             }
         )
+
+        xy_min = d[["Youth_15_24_Literacy_Rate_Male", "Youth_15_24_Literacy_Rate_Female"]].min().min() - 5
+        xy_max = d[["Youth_15_24_Literacy_Rate_Male", "Youth_15_24_Literacy_Rate_Female"]].max().max() + 5
 
         # Add 45-degree diagonal line (y = x)
         fig.add_shape(
             type="line",
-            x0=0, y0=0,
-            x1=100, y1=100,
+            x0=-10, y0=-10,
+            x1=110, y1=110,
             line=dict(color="black", dash="dash")
         )
 
         # Tidy axis
-        fig.update_xaxes(dtick=20)
-        fig.update_yaxes(dtick=20)
+        axis_range = xy_max-xy_min
+        if axis_range < 15:
+            tick_size = 2
+        elif axis_range < 40:
+            tick_size = 5
+        else:
+            tick_size = 10
+        fig.update_xaxes(dtick=tick_size)
+        fig.update_yaxes(dtick=tick_size)
         fig.update_layout(
-            xaxis=dict(range=[1, 100]),  # x scale follows y
-            yaxis=dict(range=[1, 100])
+            xaxis=dict(range=[xy_min, xy_max]),  # x scale follows y
+            yaxis=dict(range=[xy_min, xy_max])
         )
 
         return fig
@@ -407,6 +473,42 @@ def server(input, output, session):
         fig.update_yaxes(dtick=20)
 
         return fig
+    
+    @output
+    @render_plotly
+    def education_level_by_region_bar():
+        """Create bar plot of education level completed separated by region.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        px.bar
+            Plotly express bar plot object.
+        
+        """
+        d = region_completion_rate_df()
+
+        fig = px.bar(
+            d,
+            x = "Education_Level",
+            y = "Completion_Rate",
+            color = "Region",
+            color_discrete_sequence=px.colors.qualitative.Set2,
+            barmode = "group",
+            category_orders = {"Education_Level": ["Primary", "Lower Secondary", "Upper Secondary"]},
+            labels={
+                "Education_Level": "Education Level",
+                "Completion_Rate": "Completion Rate (%)"
+            },
+            range_y=[0,100]
+        )
+
+        fig.update_yaxes(dtick=20)
+
+        return fig
 
     @render.ui
     def elementary_completion_box():
@@ -426,7 +528,7 @@ def server(input, output, session):
             rate_theme = "success"
 
         return ui.value_box(
-            "Rate", 
+            "Average rate of all selected regions", 
             f"{avg_comp_rate:.1f} %", 
             kpi1_caption(avg_comp_rate),
             theme=rate_theme
