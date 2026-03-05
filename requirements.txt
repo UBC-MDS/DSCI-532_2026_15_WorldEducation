@@ -10,3 +10,4 @@ nbformat==5.10.4
 pycountry==24.6.1
 shinywidgets==0.7.1
 anywidget==0.9.21
+anthropic==0.84.0

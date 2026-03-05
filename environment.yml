@@ -16,3 +16,6 @@ dependencies:
   - pycountry
   - shinywidgets
   - anywidget
+  - chatlas
+  - openai
+  - anthropic

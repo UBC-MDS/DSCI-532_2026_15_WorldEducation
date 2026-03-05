@@ -15,6 +15,15 @@ import seaborn as sns
 import scienceplots
 import pycountry
 
+# libraries for LLM ChatBot
+from chatlas import ChatAnthropic, ChatGithub
+from pathlib import Path
+from dotenv import load_dotenv
+#import anthropic
+
+# ==========================================
+#   SETUP & DATA LOADING
+# ==========================================
 # Load data
 #data_path = Path(__file__).resolve().parent.parent / "data" / "raw" / "Global_education.csv"
 #df = pd.read_csv(data_path, encoding="latin-1")
@@ -53,6 +62,24 @@ def kpi2_caption(rate_diff):
         ui.HTML(f'<strong style="opacity:0.9">{caption_str}</strong>'),
     )
 
+# Initialize LLM Client
+load_dotenv(Path(__file__).parent / ".env")
+# OPENAI_MODELS = {"gpt-4.1", "gpt-4o", "gpt-4o-mini"}
+# ANTHROPIC_MODELS = {}
+
+client = ChatAnthropic(
+    system_prompt=sys_prompt,
+    model = "claude-3-7-sonnet-latest"
+)
+client = anthropic.AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", "YOUR_API_KEY_HERE"))
+# client.app()
+# client.console()
+
+
+
+# ==========================================
+#   UI DEFINITION
+# ==========================================
 app_ui = ui.page_fluid(
     ui.tags.head(
         ui.tags.title("World Education Dashboard")
@@ -159,17 +186,50 @@ app_ui = ui.page_fluid(
                 ),
             ),
         ),
+        # --- Tab 2: Query with Chat ---
         ui.nav_panel(
             "Query with Chat",
-            "LLM query and plots"
-            # ADD LAYOUT HERE
+            ui.h2("AI-Powered Data Filtering"),
+            ui.layout_sidebar(
+                ui.sidebar(
+                    ui.card_header("Ask the AI to filter data"),
+                    ui.chat_ui("chat"),
+                    ui.hr(),
+                    ui.download_button("download_chat_data", "Download Filtered Data", class_="btn-success w-100"),
+                    width=400,
+                ),
+                ui.layout_column_wrap(
+                    ui.card(
+                        ui.card_header("Chat Filtered Data Table"),
+                        ui.output_data_frame("chat_tbl"),
+                    ),
+                    ui.layout_column_wrap(
+                        ui.card(
+                            ui.card_header("Literacy Rate Scatterplot (Filtered)"),
+                            output_widget("chat_scatter"),
+                        ),
+                        ui.card(
+                            ui.card_header("Avg Education Level by Region (Filtered)"),
+                            output_widget("chat_bar"),
+                        ),
+                        width=1/2
+                    ),
+                    width=1,
+                    heights_equal="row"
+                )
+            )
         )
     ),
 )
 
-
+# ==========================================
+#   SERVER LOGIC
+# ==========================================
 def server(input, output, session):
 
+    # ----------------------------------------
+    # TAB 1 LOGIC (Main Dashboard)
+    # ----------------------------------------
     # 1) Get dataframe
     @reactive.Calc
     def processed_df() -> pd.DataFrame:
@@ -562,5 +622,109 @@ def server(input, output, session):
             kpi2_caption(comp_rate_diff),
             theme=diff_theme
         )
+
+    # ----------------------------------------
+    # TAB 2 LOGIC (AI Chat Tab)
+    # ----------------------------------------
+    chat = ui.Chat(id="chat")
+    # Independent reactive state for the AI Chat tab
+    chat_df = reactive.Value(df.copy())
+    
+    SYSTEM_PROMPT = f"""
+    You are a data analyst assistant. The user will ask you to filter a dataset.
+    The dataset has the following columns and types:
+    {df.dtypes.to_string()}
+    
+    Your job is to translate the user's request into a valid Pandas DataFrame.query() string.
+    Enclose the exact query string within <query> and </query> tags. 
+    Do not output python code, markdown, or explanations. 
+    Example: <query>Region == 'Asia' and Completion_Avg_Primary > 80</query>
+    """
+
+    @chat.on_user_submit
+    async def handle_chat_submit():
+        user_message = chat.user_input()
+        await chat.append_message({"role": "assistant", "content": "Querying dataset..."})
+        
+        try:
+            response = await client.messages.create(
+                model="claude-3-haiku-20240307", 
+                max_tokens=150,
+                system=SYSTEM_PROMPT,
+                messages=[{"role": "user", "content": user_message}]
+            )
+            
+            ai_response = response.content[0].text
+            
+            if "<query>" in ai_response and "</query>" in ai_response:
+                query_string = ai_response.split("<query>")[1].split("</query>")[0].strip()
+                try:
+                    new_df = df.query(query_string)
+                    chat_df.set(new_df)
+                    await chat.append_message(f"Data filtered using logic: `{query_string}`. Found {len(new_df)} rows.")
+                except Exception as e:
+                    await chat.append_message(f"Oops! I generated an invalid query: `{query_string}`. Error: {str(e)}")
+            else:
+                await chat.append_message("I couldn't figure out how to filter that. Please try rephrasing.")
+                
+        except Exception as api_error:
+             await chat.append_message(f"API Error: Make sure your Anthropic API key is set. Detail: {str(api_error)}")
+
+    @output
+    @render.data_frame
+    def chat_tbl():
+        d = chat_df()
+        # Display the first few relevant columns so the table isn't massively wide
+        cols = ["Countries and areas", "Region", "iso3"] + [c for c in d.columns if "Rate" in c][:3]
+        return render.DataGrid(d[cols], selection_mode="rows", height="250px")
+
+    @output
+    @render_plotly
+    def chat_scatter():
+        d = chat_df()
+        if d.empty:
+            return px.scatter(title="No Data Available for this query")
+            
+        fig = px.scatter(
+            d, x="Youth_15_24_Literacy_Rate_Male", y="Youth_15_24_Literacy_Rate_Female",
+            color="Region", hover_name="Countries and areas", color_discrete_sequence=px.colors.qualitative.Set2,
+            labels={"Region": "Region", "Youth_15_24_Literacy_Rate_Male": " Male Literacy Rate (%)", "Youth_15_24_Literacy_Rate_Female": "Female Literacy Rate (%)"}
+        )
+        return fig
+
+    @output
+    @render_plotly
+    def chat_bar():
+        d = chat_df()
+        if d.empty:
+            return px.bar(title="No Data Available for this query")
+            
+        # Reusing your melt logic directly for the chat bar chart
+        d_melt = d[[
+            "Completion_Avg_Primary", "Completion_Avg_Lower_Secondary",
+            "Completion_Avg_Upper_Secondary", "Region", "iso3"
+        ]].copy()
+        
+        d_melt = pd.melt(
+            d_melt, id_vars=["Region", "iso3"], 
+            value_vars=[
+                "Completion_Avg_Primary", "Completion_Avg_Lower_Secondary", "Completion_Avg_Upper_Secondary",
+            ],
+            value_name="Completion_Rate", var_name="Completion_Rate_Group", ignore_index=True
+        )
+        d_melt["Education_Level"] = d_melt["Completion_Rate_Group"].str.split("_").str[2:].str.join(" ")
+        d_grouped = d_melt[["Region", "Education_Level", "Completion_Rate"]].groupby(["Region", "Education_Level"]).mean().reset_index()
+
+        fig = px.bar(
+            d_grouped, x="Education_Level", y="Completion_Rate", color="Region",
+            color_discrete_sequence=px.colors.qualitative.Set2, barmode="group",
+            category_orders={"Education_Level": ["Primary", "Lower Secondary", "Upper Secondary"]},
+            labels={"Education_Level": "Education Level", "Completion_Rate": "Completion Rate (%)"}, range_y=[0,100]
+        )
+        return fig
+
+    @render.download(filename="ai_filtered_data.csv")
+    def download_chat_data():
+        yield chat_df().to_csv(index=False).encode("utf-8")
 
 app = App(app_ui, server)
