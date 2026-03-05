@@ -17,8 +17,13 @@ dependencies:
   - shinywidgets
   - anywidget
   - chatlas
+<<<<<<< HEAD
   - dotenv
   - openai
   - anthropic
   - ollama
   - querychat
+=======
+  - openai
+  - anthropic
+>>>>>>> c1864fc (add llm structures)
