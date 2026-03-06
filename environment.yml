@@ -17,6 +17,8 @@ dependencies:
   - shinywidgets
   - anywidget
   - chatlas
+  - dotenv
   - openai
   - anthropic
   - ollama
+  - querychat

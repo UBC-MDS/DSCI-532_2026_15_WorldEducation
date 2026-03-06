@@ -16,11 +16,13 @@ import scienceplots
 import pycountry
 
 # libraries for LLM ChatBot
+import os
 import chatlas as clt
 from pathlib import Path
 from dotenv import load_dotenv
 #import anthropic
-from ollama import chat
+# from ollama import chat
+from querychat import QueryChat
 
 # ==========================================
 #   SETUP & DATA LOADING
@@ -65,35 +67,42 @@ def kpi2_caption(rate_diff):
 
 # Initialize LLM Client
 load_dotenv(Path(__file__).parent / ".env")
-# OPENAI_MODELS = {"gpt-4.1", "gpt-4o", "gpt-4o-mini"}
-# ANTHROPIC_MODELS = {}
-    SYSTEM_PROMPT = f"""
-        You are a data analyst assistant. The user will ask you to filter a dataset.
-        The dataset has the following columns and types:
-        {df.dtypes.to_string()}
-        
-        Your job is to translate the user's request into a valid Pandas DataFrame.query() string.
-        Enclose the exact query string within <query> and </query> tags. 
-        Do not output python code, markdown, or explanations. 
-        Example: <query>Region == 'Asia' and Completion_Avg_Primary > 80</query>
-        """
 
-client = clt.ChatAnthropic(
-    system_prompt=sys_prompt,
-    model = "claude-3-7-sonnet-latest"
-)
-client = anthropic.AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", "YOUR_API_KEY_HERE"))
-# client.app()
-# client.console()
+sys_prompt = f"""
+    You are a data analyst assistant. The user will ask you to filter a dataset.
+    The dataset has the following columns and types:
+    {df.dtypes.to_string()}
+    
+    Your job is to translate the user's request into a valid Pandas DataFrame.query() string.
+    Enclose the exact query string within <query> and </query> tags. 
+    Do not output python code, markdown, or explanations. 
+    Example: <query>Region == 'Asia' and Completion_Avg_Primary > 80</query>
+    """
+
+# _greeting = open(os.path.join(os.path.dirname(__file__), "greeting.md")).read()
+GREETING = """
+👋 Hi! I can help you explore the Global Education data.
+"""
 
 
+# Initialize the correct Chatlas Client inside the server so it's safe for multi-users
+if os.environ.get("GITHUB_TOKEN"):
+    llm_client = clt.ChatGithub(model="gpt-4o-mini", system_prompt=sys_prompt)
+elif os.environ.get("ANTHROPIC_API_KEY"):
+    # standard 3.5 haiku model name. Update this string if you intentionally meant "claude-haiku-4-5-20251001"
+    llm_client = clt.ChatAnthropic(model="claude-3-5-haiku-20241022", system_prompt=sys_prompt) 
+else:
+    llm_client = None
+
+qc = QueryChat(
+    df, 
+    "df", 
+    client=llm_client, 
+    greeting=GREETING
+    )
 
 
-response = chat(
-    model='qwen3.5',
-    messages=[{'role': 'user', 'content': 'Hello!'}],
-)
-print(response.message.content)
+
 
 
 # ==========================================
@@ -212,7 +221,7 @@ app_ui = ui.page_fluid(
             ui.layout_sidebar(
                 ui.sidebar(
                     ui.card_header("Ask the AI to filter data"),
-                    ui.chat_ui("chat"),
+                    ui.chat_ui("chat"), # This targets the id="chat"
                     ui.hr(),
                     ui.download_button("download_chat_data", "Download Filtered Data", class_="btn-success w-100"),
                     width=400,
@@ -237,9 +246,23 @@ app_ui = ui.page_fluid(
                     heights_equal="row"
                 )
             )
+        ),
+        # --- Tab 3: Query with Chat ---
+        ui.nav_panel(
+            "Tests",
+            ui.h2("AI-Powered Data Filtering"),
+            ui.layout_sidebar(
+                qc.sidebar(),
+                ui.card(
+                    ui.card_header("Filtered Data"),
+                    ui.output_data_frame("ai_table"),
+                    full_screen=True,
+                ),
+            )
         )
     ),
 )
+
 
 # ==========================================
 #   SERVER LOGIC
@@ -645,49 +668,35 @@ def server(input, output, session):
     # ----------------------------------------
     # TAB 2 LOGIC (AI Chat Tab)
     # ----------------------------------------
-    chat = ui.Chat(id="chat")
-    # Independent reactive state for the AI Chat tab
+    chat_ui_instance = ui.Chat(id="chat")
     chat_df = reactive.Value(df.copy())
-    
-    SYSTEM_PROMPT = f"""
-    You are a data analyst assistant. The user will ask you to filter a dataset.
-    The dataset has the following columns and types:
-    {df.dtypes.to_string()}
-    
-    Your job is to translate the user's request into a valid Pandas DataFrame.query() string.
-    Enclose the exact query string within <query> and </query> tags. 
-    Do not output python code, markdown, or explanations. 
-    Example: <query>Region == 'Asia' and Completion_Avg_Primary > 80</query>
-    """
 
-    @chat.on_user_submit
+    @chat_ui_instance.on_user_submit
     async def handle_chat_submit():
-        user_message = chat.user_input()
-        await chat.append_message({"role": "assistant", "content": "Querying dataset..."})
+        user_message = chat_ui_instance.user_input()
         
+        if llm_client is None:
+             await chat_ui_instance.append_message("API Error: No valid LLM setup found. Check your .env file.")
+             return
+
         try:
-            response = await client.messages.create(
-                model="claude-3-haiku-20240307", 
-                max_tokens=150,
-                system=SYSTEM_PROMPT,
-                messages=[{"role": "user", "content": user_message}]
-            )
+            # We use Chatlas's .chat() function to send the message and remember history
+            response_text = str(llm_client.chat(user_message))
             
-            ai_response = response.content[0].text
-            
-            if "<query>" in ai_response and "</query>" in ai_response:
-                query_string = ai_response.split("<query>")[1].split("</query>")[0].strip()
+            if "<query>" in response_text and "</query>" in response_text:
+                query_string = response_text.split("<query>")[1].split("</query>")[0].strip()
                 try:
                     new_df = df.query(query_string)
                     chat_df.set(new_df)
-                    await chat.append_message(f"Data filtered using logic: `{query_string}`. Found {len(new_df)} rows.")
+                    await chat_ui_instance.append_message(f"Data filtered using logic: `{query_string}`. Found {len(new_df)} rows.")
                 except Exception as e:
-                    await chat.append_message(f"Oops! I generated an invalid query: `{query_string}`. Error: {str(e)}")
+                    await chat_ui_instance.append_message(f"Oops! I generated an invalid query: `{query_string}`. Error: {str(e)}")
             else:
-                await chat.append_message("I couldn't figure out how to filter that. Please try rephrasing.")
+                # If Chatlas doesn't output a query tag, just output what it replied with.
+                await chat_ui_instance.append_message(response_text)
                 
         except Exception as api_error:
-             await chat.append_message(f"API Error: Make sure your Anthropic API key is set. Detail: {str(api_error)}")
+             await chat_ui_instance.append_message(f"LLM API Error: {str(api_error)}")
 
     @output
     @render.data_frame
@@ -718,7 +727,6 @@ def server(input, output, session):
         if d.empty:
             return px.bar(title="No Data Available for this query")
             
-        # Reusing your melt logic directly for the chat bar chart
         d_melt = d[[
             "Completion_Avg_Primary", "Completion_Avg_Lower_Secondary",
             "Completion_Avg_Upper_Secondary", "Region", "iso3"
