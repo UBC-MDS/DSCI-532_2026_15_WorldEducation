@@ -10,4 +10,7 @@ nbformat==5.10.4
 pycountry==24.6.1
 shinywidgets==0.7.1
 anywidget==0.9.21
+chatlas==0.15.2
+openai==2.25.0
 anthropic==0.84.0
+ollama==0.17.5

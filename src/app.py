@@ -16,10 +16,11 @@ import scienceplots
 import pycountry
 
 # libraries for LLM ChatBot
-from chatlas import ChatAnthropic, ChatGithub
+import chatlas as clt
 from pathlib import Path
 from dotenv import load_dotenv
 #import anthropic
+from ollama import chat
 
 # ==========================================
 #   SETUP & DATA LOADING
@@ -66,8 +67,18 @@ def kpi2_caption(rate_diff):
 load_dotenv(Path(__file__).parent / ".env")
 # OPENAI_MODELS = {"gpt-4.1", "gpt-4o", "gpt-4o-mini"}
 # ANTHROPIC_MODELS = {}
+    SYSTEM_PROMPT = f"""
+        You are a data analyst assistant. The user will ask you to filter a dataset.
+        The dataset has the following columns and types:
+        {df.dtypes.to_string()}
+        
+        Your job is to translate the user's request into a valid Pandas DataFrame.query() string.
+        Enclose the exact query string within <query> and </query> tags. 
+        Do not output python code, markdown, or explanations. 
+        Example: <query>Region == 'Asia' and Completion_Avg_Primary > 80</query>
+        """
 
-client = ChatAnthropic(
+client = clt.ChatAnthropic(
     system_prompt=sys_prompt,
     model = "claude-3-7-sonnet-latest"
 )
@@ -75,6 +86,14 @@ client = anthropic.AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", "Y
 # client.app()
 # client.console()
 
+
+
+
+response = chat(
+    model='qwen3.5',
+    messages=[{'role': 'user', 'content': 'Hello!'}],
+)
+print(response.message.content)
 
 
 # ==========================================
