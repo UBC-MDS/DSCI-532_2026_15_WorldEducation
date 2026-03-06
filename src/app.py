@@ -19,6 +19,7 @@ import pycountry
 df = pd.read_csv("data/processed/processed_global_education.csv", encoding='latin-1', index_col=0)
 world_avg_el_completion_rate = df[["Completion_Rate_Primary_Male", "Completion_Rate_Primary_Female",]].mean().mean()
 table_feature_choices = df.columns.tolist()
+region_choices = ["North America", "South America", "Europe", "Asia", "Africa", "Oceania"]
 
 def kpi1_caption(rate):
     """Create caption for primary completion rate KPI"""
@@ -67,9 +68,21 @@ app_ui = ui.page_fluid(
                         ui.input_checkbox_group(
                             "input_region",
                             "Select Region:",
-                            choices=["North America", "South America", "Europe", "Asia", "Africa", "Oceania"],
-                            selected=["North America", "South America", "Europe", "Asia", "Africa", "Oceania"],
+                            choices=region_choices,
+                            selected=region_choices,
                         ),
+                        ui.div(
+                            ui.input_action_button(
+                                "select_all_regions",
+                                "Select All",
+                                class_="btn-outline-primary btn-sm me-2"
+                            ),
+                            ui.input_action_button(
+                                "reset_regions",
+                                "Reset",
+                                class_="btn-outline-secondary btn-sm"
+                            ),
+                        )
                     ),
                     width=300,
                 ),
@@ -569,6 +582,24 @@ def server(input, output, session):
             f"{comp_rate_diff:.1f} %", 
             kpi2_caption(comp_rate_diff),
             theme=diff_theme
+        )
+    
+    @reactive.effect
+    @reactive.event(input.select_all_regions)
+    def _select_all_regions():
+        ui.update_checkbox_group(
+            "input_region",
+            selected=region_choices,
+            session=session
+        )
+
+    @reactive.effect
+    @reactive.event(input.reset_regions)
+    def _reset_regions():
+        ui.update_checkbox_group(
+            "input_region",
+            selected=region_choices,
+            session=session
         )
 
 app = App(app_ui, server)
