@@ -219,14 +219,14 @@ app_ui = ui.page_fluid(
                             ),
                             ui.card(
                                 ui.card_header("Education Level by Sex"),
-                                output_widget("education_level_by_gender_bar"),
+                                output_widget("completion_rate_gap_by_region_bar"),
                             ),
-                            width=1/2,
-                        ),
-                        ui.card(
-                            ui.card_header("Male vs Female Literacy Rate by Region"),
-                            output_widget("literacy_scatterplot"),
-                            full_screen=True,
+                            ui.card(
+                                ui.card_header("Male vs Female Literacy Rate by Region"),
+                                output_widget("literacy_scatterplot"),
+                                full_screen=True,
+                            ),
+                            width=1/3,
                         ),
                     ),
                     ui.nav_panel(
@@ -438,6 +438,59 @@ def server(input, output, session):
 
         return d
 
+    @reactive.Calc
+    def completion_gap_by_region_df():
+        """
+        Create dataframe of completion rate gender gap by region and education level.
+                
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        pd.Dataframe
+            The melted dataframe
+            
+        """
+        
+        d = filtered_df().copy()
+    
+        d = d[
+            [
+                "Region",
+                "Completion_Gap_Primary",
+                "Completion_Gap_Lower_Secondary",
+                "Completion_Gap_Upper_Secondary",
+            ]
+        ]
+    
+        d = pd.melt(
+            d,
+            id_vars=["Region"],
+            value_vars=[
+                "Completion_Gap_Primary",
+                "Completion_Gap_Lower_Secondary",
+                "Completion_Gap_Upper_Secondary",
+            ],
+            var_name="Gap_Group",
+            value_name="Completion_Rate_Gap",
+            ignore_index=True,
+        )
+    
+        d["Education_Level"] = (
+            d["Gap_Group"]
+            .str.replace("Completion_Gap_", "", regex=False)
+            .str.replace("_", " ", regex=False)
+        )
+    
+        d = (
+            d.groupby(["Region", "Education_Level"], as_index=False)["Completion_Rate_Gap"]
+            .mean()
+        )
+    
+        return d
+
     # 3) Create object to display
     @output
     @render_widget
@@ -565,8 +618,8 @@ def server(input, output, session):
 
     @output
     @render_plotly
-    def education_level_by_gender_bar():
-        """Create bar plot of education level completed separated by gender.
+    def completion_rate_gap_by_region_bar():
+        """Create bar plot of completion rate gender gap by region.
 
         Parameters
         ----------
@@ -578,24 +631,28 @@ def server(input, output, session):
             Plotly express bar plot object.
         
         """
-        d = sex_completion_rate_df()
-
+        d = completion_gap_by_region_df()
+    
         fig = px.bar(
             d,
-            x = "Education_Level",
-            y = "Completion_Rate",
-            color = "Sex",
-            barmode = "group",
-            category_orders = {"Education_Level": ["Primary", "Lower Secondary", "Upper Secondary"]},
+            x="Education_Level",
+            y="Completion_Rate_Gap",
+            color="Region",
+            color_discrete_map=region_color_map,
+            barmode="group",
+            category_orders={
+                "Education_Level": ["Primary", "Lower Secondary", "Upper Secondary"],
+                "Region": region_choices,
+            },
             labels={
                 "Education_Level": "Education Level",
-                "Completion_Rate": "Completion Rate (%)"
+                "Completion_Rate_Gap": "Completion Rate Gap (Male - Female, %)",
             },
-            range_y=[0,100]
         )
-
-        fig.update_yaxes(dtick=20)
-
+    
+        fig.add_hline(y=0, line_dash="dash", line_color="black")
+        fig.update_yaxes(dtick=2)
+    
         return fig
     
     @output
