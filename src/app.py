@@ -152,7 +152,11 @@ app_ui = ui.page_fluid(
                                 "Reset",
                                 class_="btn-outline-secondary btn-sm"
                             ),
-                        )
+                        ),
+                        ui.p(
+                            "The selected regions apply to the map and KPI cards in the Overview tab, charts in the Completion & Literacy tab, and the table in the Data Table tab.",
+                            class_="text-muted small mt-2"
+                        ),
                     ),
                     width=300,
                 ),
@@ -162,6 +166,10 @@ app_ui = ui.page_fluid(
                         ui.layout_columns(
                             ui.card(
                                 ui.card_header("Global Education Indicators Map"),
+                                ui.p(
+                                    "Select a metric to map across the chosen regions. The region filter also updates the KPI cards.",
+                                    class_="text-muted small"
+                                ),
                                 ui.input_select(
                                     "input_map_metric",
                                     "Map metric",
@@ -184,14 +192,26 @@ app_ui = ui.page_fluid(
                         ui.layout_column_wrap(
                             ui.card(
                                 ui.card_header("Average Education Level by Region"),
+                                ui.p(
+                                    "Compare regional patterns in average education level",
+                                    class_="text-muted small"
+                                ),
                                 output_widget("education_level_by_region_bar"),
                             ),
                             ui.card(
                                 ui.card_header("Completion Rate Gap by Region"),
+                                ui.p(
+                                    "Compare regional patterns in completion rate gap between genders",
+                                    class_="text-muted small"
+                                ),
                                 output_widget("completion_rate_gap_by_region_bar"),
                             ),
                             ui.card(
                                 ui.card_header("Male vs Female Literacy Rate by Region"),
+                                ui.p(
+                                    "Compare regional patterns in gender disparities in literacy rates",
+                                    class_="text-muted small"
+                                ),
                                 output_widget("literacy_scatterplot"),
                                 full_screen=True,
                             ),
@@ -202,6 +222,10 @@ app_ui = ui.page_fluid(
                         "Data Table",
                         ui.card(
                             ui.card_header("Data Table"),
+                            ui.p(
+                                "Inspect the filtered country-level data and choose which features to display",
+                                class_="text-muted"
+                            ),
                             ui.input_selectize(
                                 "input_table_features",
                                 "Table features:",
