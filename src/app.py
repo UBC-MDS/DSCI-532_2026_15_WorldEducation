@@ -16,8 +16,6 @@ import scienceplots
 import pycountry
 
 # Load data
-#data_path = Path(__file__).resolve().parent.parent / "data" / "raw" / "Global_education.csv"
-#df = pd.read_csv(data_path, encoding="latin-1")
 df = pd.read_csv("data/processed/processed_global_education.csv", encoding='latin-1')
 world_avg_el_completion_rate = df[["Completion_Rate_Primary_Male", "Completion_Rate_Primary_Female",]].mean().mean()
 
@@ -69,17 +67,9 @@ app_ui = ui.page_fluid(
                             "input_region",
                             "Select Region:",
                             choices=["North America", "South America", "Europe", "Asia", "Africa", "Oceania"],
+                            selected=["North America", "South America", "Europe", "Asia", "Africa", "Oceania"],
                         ),
-                        ui.input_action_button("apply_filters", "Apply Filters", class_="btn-primary w-100"),
-                    ),
-                    width=300,
-                ),
-
-                ui.layout_column_wrap(
-                    ui.layout_column_wrap(
-                        ui.card(
-                            ui.card_header("Global Education Indicators Map"),
-                            ui.input_select(
+                        ui.input_select(
                             "input_map_metric",
                             "Map metric",
                                 {
@@ -118,6 +108,14 @@ app_ui = ui.page_fluid(
                                     },
                                 },
                             ),
+                    ),
+                    width=300,
+                ),
+
+                ui.layout_column_wrap(
+                    ui.layout_column_wrap(
+                        ui.card(
+                            ui.card_header("Global Education Indicators Map"),
                             output_widget("world_map"),
                         ),
                         
@@ -191,7 +189,6 @@ def server(input, output, session):
 
     # 2) Apply filters (triggered by click filter button)
     @reactive.Calc
-    @reactive.event(input.apply_filters, ignore_none=False)
     def filtered_df():
         """Apply filters when triggered by click of "Apply Filters" button
 
