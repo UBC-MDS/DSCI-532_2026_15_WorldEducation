@@ -30,6 +30,49 @@ df = pd.read_csv("data/processed/processed_global_education.csv", encoding='lati
 world_avg_el_completion_rate = df[["Completion_Rate_Primary_Male", "Completion_Rate_Primary_Female",]].mean().mean()
 table_feature_choices = df.columns.tolist()
 region_choices = ["North America", "South America", "Europe", "Asia", "Africa", "Oceania"]
+region_color_map = {
+    "North America": "#66c2a5",
+    "South America": "#fc8d62",
+    "Europe": "#8da0cb",
+    "Asia": "#e78ac3",
+    "Africa": "#a6d854",
+    "Oceania": "#ffd92f",
+}
+map_metric_choices = {
+    "Access": {
+        "OOSR_Avg_Primary": "Out-of-school rate (Primary, avg)",
+        "OOSR_Avg_Lower_Secondary": "Out-of-school rate (Lower secondary, avg)",
+        "OOSR_Avg_Upper_Secondary": "Out-of-school rate (Upper secondary, avg)",
+        "OOSR_Gap_Primary": "Out-of-school rate gender gap (Primary)",
+        "OOSR_Gap_Lower_Secondary": "Out-of-school rate gender gap (Lower secondary)",
+        "OOSR_Gap_Upper_Secondary": "Out-of-school rate gender gap (Upper secondary)",
+        "Gross_Primary_Education_Enrollment": "Gross primary enrollment",
+        "Gross_Tertiary_Education_Enrollment": "Gross tertiary enrollment",
+    },
+    "Completion": {
+        "Completion_Avg_Primary": "Completion rate (Primary, avg)",
+        "Completion_Avg_Lower_Secondary": "Completion rate (Lower secondary, avg)",
+        "Completion_Avg_Upper_Secondary": "Completion rate (Upper secondary, avg)",
+        "Completion_Gap_Primary": "Completion rate gender gap (Primary)",
+        "Completion_Gap_Lower_Secondary": "Completion rate gender gap (Lower secondary)",
+        "Completion_Gap_Upper_Secondary": "Completion rate gender gap (Upper secondary)",
+    },
+    "Learning": {
+        "Grade_2_3_Proficiency_Reading": "Grade 2–3 proficiency (Reading)",
+        "Grade_2_3_Proficiency_Math": "Grade 2–3 proficiency (Math)",
+        "Primary_End_Proficiency_Reading": "Primary end proficiency (Reading)",
+        "Primary_End_Proficiency_Math": "Primary end proficiency (Math)",
+        "Lower_Secondary_End_Proficiency_Reading": "Lower secondary end proficiency (Reading)",
+        "Lower_Secondary_End_Proficiency_Math": "Lower secondary end proficiency (Math)",
+    },
+    "Context": {
+        "Youth_15_24_Literacy_Rate_Male": "Youth literacy rate (Male)",
+        "Youth_15_24_Literacy_Rate_Female": "Youth literacy rate (Female)",
+        "Literacy_Gap": "Youth literacy gender gap (Male - Female)",
+        "Birth_Rate": "Birth rate",
+        "Unemployment_Rate": "Unemployment rate",
+    },
+}
 
 def kpi1_caption(rate):
     """Create caption for primary completion rate KPI"""
@@ -142,94 +185,64 @@ app_ui = ui.page_fluid(
                     width=300,
                 ),
 
-                ui.layout_column_wrap(
-                    ui.layout_column_wrap(
-                        ui.card(
-                            ui.card_header("Global Education Indicators Map"),
-                            ui.input_select(
-                                "input_map_metric",
-                                "Map metric",
-                                {
-                                    "Access": {
-                                        "OOSR_Avg_Primary": "Out-of-school rate (Primary, avg)",
-                                        "OOSR_Avg_Lower_Secondary": "Out-of-school rate (Lower secondary, avg)",
-                                        "OOSR_Avg_Upper_Secondary": "Out-of-school rate (Upper secondary, avg)",
-                                        "OOSR_Gap_Primary": "Out-of-school rate gender gap (Primary)",
-                                        "OOSR_Gap_Lower_Secondary": "Out-of-school rate gender gap (Lower secondary)",
-                                        "OOSR_Gap_Upper_Secondary": "Out-of-school rate gender gap (Upper secondary)",
-                                        "Gross_Primary_Education_Enrollment": "Gross primary enrollment",
-                                        "Gross_Tertiary_Education_Enrollment": "Gross tertiary enrollment",
-                                    },
-                                    "Completion": {
-                                        "Completion_Avg_Primary": "Completion rate (Primary, avg)",
-                                        "Completion_Avg_Lower_Secondary": "Completion rate (Lower secondary, avg)",
-                                        "Completion_Avg_Upper_Secondary": "Completion rate (Upper secondary, avg)",
-                                        "Completion_Gap_Primary": "Completion rate gender gap (Primary)",
-                                        "Completion_Gap_Lower_Secondary": "Completion rate gender gap (Lower secondary)",
-                                        "Completion_Gap_Upper_Secondary": "Completion rate gender gap (Upper secondary)",
-                                    },
-                                    "Learning": {
-                                        "Grade_2_3_Proficiency_Reading": "Grade 2–3 proficiency (Reading)",
-                                        "Grade_2_3_Proficiency_Math": "Grade 2–3 proficiency (Math)",
-                                        "Primary_End_Proficiency_Reading": "Primary end proficiency (Reading)",
-                                        "Primary_End_Proficiency_Math": "Primary end proficiency (Math)",
-                                        "Lower_Secondary_End_Proficiency_Reading": "Lower secondary end proficiency (Reading)",
-                                        "Lower_Secondary_End_Proficiency_Math": "Lower secondary end proficiency (Math)",
-                                    },
-                                    "Context": {
-                                        "Youth_15_24_Literacy_Rate_Male": "Youth literacy rate (Male)",
-                                        "Youth_15_24_Literacy_Rate_Female": "Youth literacy rate (Female)",
-                                        "Literacy_Gap": "Youth literacy gender gap (Male - Female)",
-                                        "Birth_Rate": "Birth rate",
-                                        "Unemployment_Rate": "Unemployment rate",
-                                    },
-                                },
+                ui.navset_tab(
+                    ui.nav_panel(
+                        "Overview",
+                        ui.layout_column_wrap(
+                            ui.card(
+                                ui.card_header("Global Education Indicators Map"),
+                                ui.input_select(
+                                    "input_map_metric",
+                                    "Map metric",
+                                    map_metric_choices,
+                                ),
+                                output_widget("world_map"),
                             ),
-                            output_widget("world_map"),
-                        ),
-                        
-                    ),
-                    ui.layout_column_wrap(
-                        ui.card(
-                            ui.card_header("Average Education Level by Region"),
-                            output_widget("education_level_by_region_bar"),
-                        ),
-                        ui.card(
-                            ui.card_header("Primary School Completion"),
-                            ui.layout_column_wrap(
-                                ui.output_ui("elementary_completion_box"),
-                                ui.output_ui("el_completion_rate_gender_difference_box"),
-                                fill=False,
-                                width=1,
+                            ui.card(
+                                ui.card_header("Primary School Completion"),
+                                ui.layout_column_wrap(
+                                    ui.output_ui("elementary_completion_box"),
+                                    ui.output_ui("el_completion_rate_gender_difference_box"),
+                                    fill=False,
+                                    width=1,
+                                ),
                             ),
+                            width=1,
                         ),
-                        width=1/2
                     ),
-                    ui.layout_column_wrap(
-                        ui.card(
-                            ui.card_header("Education Level by Sex"),
-                            output_widget("education_level_by_gender_bar"),
+                    ui.nav_panel(
+                        "Completion & Literacy",
+                        ui.layout_column_wrap(
+                            ui.card(
+                                ui.card_header("Average Education Level by Region"),
+                                output_widget("education_level_by_region_bar"),
+                            ),
+                            ui.card(
+                                ui.card_header("Education Level by Sex"),
+                                output_widget("education_level_by_gender_bar"),
+                            ),
+                            width=1/2,
                         ),
                         ui.card(
                             ui.card_header("Male vs Female Literacy Rate by Region"),
                             output_widget("literacy_scatterplot"),
                             full_screen=True,
                         ),
-                        width=1/2
                     ),
-                    ui.card(
-                        ui.card_header("Data Table"),
-                        ui.input_selectize(
-                            "input_table_features",
-                            "Table features:",
-                            choices=table_feature_choices,
-                            selected=["Countries and areas", "Region"],
-                            multiple=True,
+                    ui.nav_panel(
+                        "Data Table",
+                        ui.card(
+                            ui.card_header("Data Table"),
+                            ui.input_selectize(
+                                "input_table_features",
+                                "Table features:",
+                                choices=table_feature_choices,
+                                selected=["Countries and areas", "Region"],
+                                multiple=True,
+                            ),
+                            ui.output_data_frame("tbl"),
                         ),
-                        ui.output_data_frame("tbl"),
                     ),
-                    width=1,
-                    heights_equal="row",
                 ),
             ),
         ),
@@ -297,7 +310,7 @@ def server(input, output, session):
 
         return processed
 
-    # 2) Apply filters (triggered by click filter button)
+    # 2) Apply region filters reactively
     @reactive.Calc
     def filtered_df():
         """Apply filters when triggered by click of "Apply Filters" button
@@ -485,7 +498,8 @@ def server(input, output, session):
             y="Youth_15_24_Literacy_Rate_Female",
             color="Region",
             hover_name="Countries and areas",
-            color_discrete_sequence=px.colors.qualitative.Set2,
+            color_discrete_map=region_color_map,
+            category_orders={"Region": region_choices},
             labels={
                 "Region": "Region",
                 "Youth_15_24_Literacy_Rate_Male": " Male Literacy Rate (%)",
@@ -599,24 +613,27 @@ def server(input, output, session):
             Plotly express bar plot object.
         """
         d = region_completion_rate_df()
-
+    
         fig = px.bar(
             d,
-            x = "Education_Level",
-            y = "Completion_Rate",
-            color = "Region",
-            color_discrete_sequence=px.colors.qualitative.Set2,
-            barmode = "group",
-            category_orders = {"Education_Level": ["Primary", "Lower Secondary", "Upper Secondary"]},
+            x="Education_Level",
+            y="Completion_Rate",
+            color="Region",
+            color_discrete_map=region_color_map,
+            barmode="group",
+            category_orders={
+                "Education_Level": ["Primary", "Lower Secondary", "Upper Secondary"],
+                "Region": region_choices,
+            },
             labels={
                 "Education_Level": "Education Level",
                 "Completion_Rate": "Completion Rate (%)"
             },
-            range_y=[0,100]
+            range_y=[0, 100]
         )
-
+    
         fig.update_yaxes(dtick=20)
-
+    
         return fig
 
     @render.ui
