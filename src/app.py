@@ -27,7 +27,6 @@ from querychat import QueryChat
 # ==========================================
 # Load data
 df = pd.read_csv("data/processed/processed_global_education.csv", encoding='latin-1', index_col=0)
-world_avg_el_completion_rate = df[["Completion_Rate_Primary_Male", "Completion_Rate_Primary_Female",]].mean().mean()
 table_feature_choices = df.columns.tolist()
 region_choices = ["North America", "South America", "Europe", "Asia", "Africa", "Oceania"]
 region_color_map = {
@@ -73,38 +72,11 @@ map_metric_choices = {
         "Unemployment_Rate": "Unemployment rate",
     },
 }
-
-def kpi1_caption(rate):
-    """Create caption for primary completion rate KPI"""
-
-    rate_diff = rate - world_avg_el_completion_rate
-
-    if rate_diff >= 0:
-        caption_str = f"Completion rate is {rate_diff:.1f} % above world average {world_avg_el_completion_rate:.1f} %"
-    else:
-        caption_str = f"Completion rate is {-rate_diff:.1f} % below world average {world_avg_el_completion_rate:.1f} %"
-
-    return ui.tags.div(
-        ui.HTML(f'<strong style="opacity:0.9">{caption_str}</strong>'),
-    )
-
-def kpi2_caption(rate_diff):
-    """Create caption for primary completion rate gender difference KPI"""
-
-    if rate_diff < -2:
-        caption_str = "Male completion rate is more than 2 percentage points below female"
-    elif rate_diff < -1:
-        caption_str = "Male completion rate is more than 1 percentage point below female"
-    elif rate_diff < 1:
-        caption_str = "Completion rates are within 1 percentage point"
-    elif rate_diff < 2:
-        caption_str = "Female completion rate is more than 1 percentage point below male"
-    else:
-        caption_str = "Female completion rate is more than 2 percentage points below male"
-
-    return ui.tags.div(
-        ui.HTML(f'<strong style="opacity:0.9">{caption_str}</strong>'),
-    )
+def metric_label(metric_key):
+    for group in map_metric_choices.values():
+        if metric_key in group:
+            return group[metric_key]
+    return metric_key
 
 # Initialize LLM Client
 load_dotenv(Path(__file__).parent / ".env")
@@ -184,11 +156,10 @@ app_ui = ui.page_fluid(
                     ),
                     width=300,
                 ),
-
                 ui.navset_tab(
                     ui.nav_panel(
                         "Overview",
-                        ui.layout_column_wrap(
+                        ui.layout_columns(
                             ui.card(
                                 ui.card_header("Global Education Indicators Map"),
                                 ui.input_select(
@@ -198,16 +169,14 @@ app_ui = ui.page_fluid(
                                 ),
                                 output_widget("world_map"),
                             ),
-                            ui.card(
-                                ui.card_header("Primary School Completion"),
-                                ui.layout_column_wrap(
-                                    ui.output_ui("elementary_completion_box"),
-                                    ui.output_ui("el_completion_rate_gender_difference_box"),
-                                    fill=False,
-                                    width=1,
-                                ),
+                            ui.layout_column_wrap(
+                                ui.output_ui("metric_average_box"),
+                                ui.output_ui("metric_vs_world_box"),
+                                ui.output_ui("metric_coverage_box"),
+                                width=1,
+                                fill=False,
                             ),
-                            width=1,
+                            col_widths=(8, 4),
                         ),
                     ),
                     ui.nav_panel(
@@ -218,7 +187,7 @@ app_ui = ui.page_fluid(
                                 output_widget("education_level_by_region_bar"),
                             ),
                             ui.card(
-                                ui.card_header("Education Level by Sex"),
+                                ui.card_header("Completion Rate Gap by Region"),
                                 output_widget("completion_rate_gap_by_region_bar"),
                             ),
                             ui.card(
@@ -335,6 +304,19 @@ def server(input, output, session):
             d = d[d["Region"].isin(selected_regions)].copy()
     
         return d
+    @reactive.Calc
+    def selected_metric():
+        return input.input_map_metric()
+    
+    @reactive.Calc
+    def filtered_metric_series():
+        d = filtered_df()
+        metric = selected_metric()
+        return d[metric].dropna()
+    @reactive.Calc
+    def global_metric_series():
+        metric = selected_metric()
+        return df[metric].dropna()
     
     @reactive.Calc
     def sex_completion_rate_df():
@@ -524,7 +506,8 @@ def server(input, output, session):
         )
 
         fig.update_layout(
-            margin=dict(l=0, r=0, t=30, b=0) 
+            margin=dict(l=0, r=0, t=30, b=0),
+            height=450
         )
 
         return fig
@@ -692,58 +675,85 @@ def server(input, output, session):
         fig.update_yaxes(dtick=20)
     
         return fig
-
+        
+    # KPI 1
     @render.ui
-    def elementary_completion_box():
-        avg_comp_rate = (
-            sex_completion_rate_df()[["Education_Level", "Completion_Rate"]]
-            .groupby(["Education_Level"])
-            .mean()
-            .loc["Primary"]
-            .values[0]
-        )
-
-        if np.abs(avg_comp_rate) < 70:
-            rate_theme = "danger"
-        elif np.abs(avg_comp_rate) < 90:
-            rate_theme = "warning"
-        else:
-            rate_theme = "success"
-
-        return ui.value_box(
-            "Average rate of all selected regions", 
-            f"{avg_comp_rate:.1f} %", 
-            kpi1_caption(avg_comp_rate),
-            theme=rate_theme
-        )
+    def metric_average_box():
+        metric = selected_metric()
+        label = metric_label(metric)
+        values = filtered_metric_series()
     
-    @render.ui
-    def el_completion_rate_gender_difference_box():
-        df = sex_completion_rate_df().copy()
-        male_comp_rate = (
-            df[(df["Sex"]=="Male") & (df["Education_Level"]=="Primary")]
-            .loc[:,"Completion_Rate"]
-            .values[0]
-        )
-        female_comp_rate = (
-            df[(df["Sex"]=="Female") & (df["Education_Level"]=="Primary")]
-            .loc[:,"Completion_Rate"]
-            .values[0]
-        )
-        comp_rate_diff = male_comp_rate - female_comp_rate
-
-        if np.abs(comp_rate_diff) > 2:
-            diff_theme = "danger"
-        elif np.abs(comp_rate_diff) > 1:
-            diff_theme = "warning"
-        else:
-            diff_theme = "success"
-
+        if len(values) == 0:
+            return ui.value_box(
+                f"Average: {label}",
+                "No data",
+                theme="secondary"
+            )
+    
+        avg_value = values.mean()
+    
         return ui.value_box(
-            "Difference between male rate and female rate", 
-            f"{comp_rate_diff:.1f} %", 
-            kpi2_caption(comp_rate_diff),
-            theme=diff_theme
+            f"Average: {label}",
+            f"{avg_value:.1f}",
+            ui.HTML("<strong style='opacity:0.9'>Across selected regions</strong>"),
+            theme="primary"
+        )
+    #KPI Card 2
+    @render.ui
+    def metric_vs_world_box():
+        metric = selected_metric()
+        label = metric_label(metric)
+        filtered_values = filtered_metric_series()
+        global_values = global_metric_series()
+    
+        if len(filtered_values) == 0 or len(global_values) == 0:
+            return ui.value_box(
+                f"Vs world average: {label}",
+                "No data",
+                theme="secondary"
+            )
+    
+        filtered_avg = filtered_values.mean()
+        global_avg = global_values.mean()
+        diff = filtered_avg - global_avg
+    
+        if diff >= 0:
+            caption = f"{diff:.1f} above world average ({global_avg:.1f})"
+        else:
+            caption = f"{-diff:.1f} below world average ({global_avg:.1f})"
+    
+        theme = "success" if abs(diff) < 1 else "warning"
+    
+        return ui.value_box(
+            f"Vs world average: {label}",
+            f"{diff:+.1f}",
+            ui.HTML(f"<strong style='opacity:0.9'>{caption}</strong>"),
+            theme=theme
+        )
+    # KPI Card 3
+    @render.ui
+    def metric_coverage_box():
+        metric = selected_metric()
+        label = metric_label(metric)
+        d = filtered_df()
+    
+        n_available = d[metric].notna().sum()
+        n_total = len(d)
+    
+        if n_total == 0:
+            return ui.value_box(
+                f"Data coverage: {label}",
+                "No data",
+                theme="secondary"
+            )
+    
+        pct = 100 * n_available / n_total
+    
+        return ui.value_box(
+            f"Data coverage: {label}",
+            f"{n_available}/{n_total}",
+            ui.HTML(f"<strong style='opacity:0.9'>{pct:.0f}% of selected countries have data</strong>"),
+            theme="info"
         )
     
     @reactive.effect
