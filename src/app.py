@@ -16,8 +16,9 @@ import scienceplots
 import pycountry
 
 # Load data
-df = pd.read_csv("data/processed/processed_global_education.csv", encoding='latin-1')
+df = pd.read_csv("data/processed/processed_global_education.csv", encoding='latin-1', index_col=0)
 world_avg_el_completion_rate = df[["Completion_Rate_Primary_Male", "Completion_Rate_Primary_Female",]].mean().mean()
+table_feature_choices = df.columns.tolist()
 
 def kpi1_caption(rate):
     """Create caption for primary completion rate KPI"""
@@ -69,9 +70,17 @@ app_ui = ui.page_fluid(
                             choices=["North America", "South America", "Europe", "Asia", "Africa", "Oceania"],
                             selected=["North America", "South America", "Europe", "Asia", "Africa", "Oceania"],
                         ),
-                        ui.input_select(
-                            "input_map_metric",
-                            "Map metric",
+                    ),
+                    width=300,
+                ),
+
+                ui.layout_column_wrap(
+                    ui.layout_column_wrap(
+                        ui.card(
+                            ui.card_header("Global Education Indicators Map"),
+                            ui.input_select(
+                                "input_map_metric",
+                                "Map metric",
                                 {
                                     "Access": {
                                         "OOSR_Avg_Primary": "Out-of-school rate (Primary, avg)",
@@ -108,14 +117,6 @@ app_ui = ui.page_fluid(
                                     },
                                 },
                             ),
-                    ),
-                    width=300,
-                ),
-
-                ui.layout_column_wrap(
-                    ui.layout_column_wrap(
-                        ui.card(
-                            ui.card_header("Global Education Indicators Map"),
                             output_widget("world_map"),
                         ),
                         
@@ -150,8 +151,15 @@ app_ui = ui.page_fluid(
                     ),
                     ui.card(
                         ui.card_header("Data Table"),
-                        ui.output_data_frame("tbl"),
+                        ui.input_selectize(
+                            "input_table_features",
+                            "Table features:",
+                            choices=table_feature_choices,
+                            selected=["Countries and areas", "Region"],
+                            multiple=True,
                         ),
+                        ui.output_data_frame("tbl"),
+                    ),
                     width=1,
                     heights_equal="row",
                 ),
@@ -426,10 +434,13 @@ def server(input, output, session):
             Tabular data to be displayed.
         """
         d = filtered_df()
-        metric = input.input_map_metric()
-        cols = ["Countries and areas", "Region", "iso3", metric]
-        cols = [c for c in cols if c in d.columns]
-
+        selected_cols = input.input_table_features()
+    
+        if not selected_cols:
+            selected_cols = list(d.columns)
+    
+        cols = [c for c in selected_cols if c in d.columns]
+    
         return render.DataGrid(
             d[cols],
             selection_mode="rows",
