@@ -260,13 +260,11 @@ app_ui = ui.page_fluid(
                             ui.card_header("Literacy Rate Scatterplot (Filtered)"),
                             output_widget("chat_scatter"),
                         ),
-                    ),
-                    ui.nav_panel(
-                        "Data Table",
                         ui.card(
                             ui.card_header("Avg Education Level by Region (Filtered)"),
                             output_widget("chat_bar"),
                         ),
+                        width=1/2
                     ),
                     width=1,
                     heights_equal="row"
