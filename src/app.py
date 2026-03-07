@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt  # earlier version to be removed
 import matplotlib.gridspec as gridspec  # earlier version to be removed
 import plotly.express as px
 import seaborn as sns  # earlier version to be removed
-import scienceplots. # earlier version to be removed
+import scienceplots  # earlier version to be removed
 import pycountry  # earlier version to be removed
 
 # libraries for LLM ChatBot
