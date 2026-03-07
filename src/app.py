@@ -23,6 +23,7 @@ from dotenv import load_dotenv
 #import anthropic
 # from ollama import chat
 from querychat import QueryChat
+import querychat
 
 # ==========================================
 #   SETUP & DATA LOADING
@@ -68,41 +69,26 @@ def kpi2_caption(rate_diff):
 # Initialize LLM Client
 load_dotenv(Path(__file__).parent / ".env")
 
-sys_prompt = f"""
-    You are a data analyst assistant. The user will ask you to filter a dataset.
-    The dataset has the following columns and types:
-    {df.dtypes.to_string()}
-    
-    Your job is to translate the user's request into a valid Pandas DataFrame.query() string.
-    Enclose the exact query string within <query> and </query> tags. 
-    Do not output python code, markdown, or explanations. 
-    Example: <query>Region == 'Asia' and Completion_Avg_Primary > 80</query>
-    """
-
-# _greeting = open(os.path.join(os.path.dirname(__file__), "greeting.md")).read()
-GREETING = """
-👋 Hi! I can help you explore the Global Education data.
-"""
-
-
 # Initialize the correct Chatlas Client inside the server so it's safe for multi-users
 if os.environ.get("GITHUB_TOKEN"):
-    llm_client = clt.ChatGithub(model="gpt-4o-mini", system_prompt=sys_prompt)
+    llm_client = clt.ChatGithub(model="gpt-4o-mini")
 elif os.environ.get("ANTHROPIC_API_KEY"):
     # standard 3.5 haiku model name. Update this string if you intentionally meant "claude-haiku-4-5-20251001"
-    llm_client = clt.ChatAnthropic(model="claude-3-5-haiku-20241022", system_prompt=sys_prompt) 
+    llm_client = clt.ChatAnthropic(model="claude-3-5-haiku-20241022") 
 else:
     llm_client = None
 
+# QueryChat Setup
+# Read the greeting from the external markdown file
+greeting_path = Path(__file__).parent / "greeting.md"
+GREETING = greeting_path.read_text(encoding="utf-8")
+
 qc = QueryChat(
-    df, 
-    "df", 
-    client=llm_client, 
-    greeting=GREETING
-    )
-
-
-
+    df.copy(),
+    "global_education",
+    greeting=GREETING,
+    client=llm_client,
+)
 
 
 # ==========================================
@@ -219,16 +205,15 @@ app_ui = ui.page_fluid(
             "Query with Chat",
             ui.h2("AI-Powered Data Filtering"),
             ui.layout_sidebar(
-                ui.sidebar(
-                    ui.card_header("Ask the AI to filter data"),
-                    ui.chat_ui("chat"), # This targets the id="chat"
-                    ui.hr(),
-                    ui.download_button("download_chat_data", "Download Filtered Data", class_="btn-success w-100"),
-                    width=400,
-                ),
+                qc.sidebar(), # Uses querychat sidebar
                 ui.layout_column_wrap(
                     ui.card(
-                        ui.card_header("Chat Filtered Data Table"),
+                        # Put title and download button together
+                        ui.card_header(
+                            ui.output_text("chat_title"),
+                            ui.download_button("download_chat_data", "Download CSV", class_="btn-success btn-sm"),
+                                class_="d-flex justify-content-between align-items-center"
+                        ),
                         ui.output_data_frame("chat_tbl"),
                     ),
                     ui.layout_column_wrap(
@@ -244,20 +229,9 @@ app_ui = ui.page_fluid(
                     ),
                     width=1,
                     heights_equal="row"
-                )
-            )
-        ),
-        # --- Tab 3: Query with Chat ---
-        ui.nav_panel(
-            "Tests",
-            ui.h2("AI-Powered Data Filtering"),
-            ui.layout_sidebar(
-                qc.sidebar(),
-                ui.card(
-                    ui.card_header("Filtered Data"),
-                    ui.output_data_frame("ai_table"),
-                    full_screen=True,
                 ),
+                # Set layout to a fixed height,
+                height="80vh" 
             )
         )
     ),
@@ -268,7 +242,6 @@ app_ui = ui.page_fluid(
 #   SERVER LOGIC
 # ==========================================
 def server(input, output, session):
-
     # ----------------------------------------
     # TAB 1 LOGIC (Main Dashboard)
     # ----------------------------------------
@@ -666,50 +639,44 @@ def server(input, output, session):
         )
 
     # ----------------------------------------
-    # TAB 2 LOGIC (AI Chat Tab)
+    # TAB 2 LOGIC (QueryChat)
     # ----------------------------------------
-    chat_ui_instance = ui.Chat(id="chat")
-    chat_df = reactive.Value(df.copy())
+    qc_vals = qc.server()
 
-    @chat_ui_instance.on_user_submit
-    async def handle_chat_submit():
-        user_message = chat_ui_instance.user_input()
-        
-        if llm_client is None:
-             await chat_ui_instance.append_message("API Error: No valid LLM setup found. Check your .env file.")
-             return
-
-        try:
-            # We use Chatlas's .chat() function to send the message and remember history
-            response_text = str(llm_client.chat(user_message))
-            
-            if "<query>" in response_text and "</query>" in response_text:
-                query_string = response_text.split("<query>")[1].split("</query>")[0].strip()
-                try:
-                    new_df = df.query(query_string)
-                    chat_df.set(new_df)
-                    await chat_ui_instance.append_message(f"Data filtered using logic: `{query_string}`. Found {len(new_df)} rows.")
-                except Exception as e:
-                    await chat_ui_instance.append_message(f"Oops! I generated an invalid query: `{query_string}`. Error: {str(e)}")
-            else:
-                # If Chatlas doesn't output a query tag, just output what it replied with.
-                await chat_ui_instance.append_message(response_text)
-                
-        except Exception as api_error:
-             await chat_ui_instance.append_message(f"LLM API Error: {str(api_error)}")
+    @render.text
+    def chat_title():
+        return qc_vals.title() or "Global Education Dataset"
 
     @output
     @render.data_frame
     def chat_tbl():
-        d = chat_df()
-        # Display the first few relevant columns so the table isn't massively wide
-        cols = ["Countries and areas", "Region", "iso3"] + [c for c in d.columns if "Rate" in c][:3]
-        return render.DataGrid(d[cols], selection_mode="rows", height="250px")
+        d = qc_vals.df()
+
+        # Drop the unwanted index column
+        d = d.drop(columns=["Unnamed: 0"], errors="ignore")
+        
+        # Define categorical columns
+        cat_cols = ["Countries and areas", "Region", "iso3"]
+        
+        # Grab all the remaining numerical columns
+        num_cols = [c for c in d.columns if c not in cat_cols]
+        
+        # Combine the lists to create final display order
+        final_order = cat_cols + num_cols
+
+        # Apply the order to the dataframe
+        valid_cols = [c for c in final_order if c in d.columns]
+        
+        return render.DataGrid(
+            d[valid_cols], 
+            selection_mode="rows", 
+            height="250px"
+        )
 
     @output
     @render_plotly
     def chat_scatter():
-        d = chat_df()
+        d = qc_vals.df()
         if d.empty:
             return px.scatter(title="No Data Available for this query")
             
@@ -723,7 +690,7 @@ def server(input, output, session):
     @output
     @render_plotly
     def chat_bar():
-        d = chat_df()
+        d = qc_vals.df()
         if d.empty:
             return px.bar(title="No Data Available for this query")
             
@@ -750,8 +717,9 @@ def server(input, output, session):
         )
         return fig
 
-    @render.download(filename="ai_filtered_data.csv")
+    @render.download(filename="global_education_filtered.csv")
     def download_chat_data():
-        yield chat_df().to_csv(index=False).encode("utf-8")
+        yield qc_vals.df().to_csv(index=False).encode("utf-8")
+
 
 app = App(app_ui, server)
