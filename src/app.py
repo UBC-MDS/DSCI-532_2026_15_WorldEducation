@@ -83,10 +83,14 @@ else:
 greeting_path = Path(__file__).parent / "greeting.md"
 GREETING = greeting_path.read_text(encoding="utf-8")
 
+data_desc_path = Path(__file__).parent / "greeting.md"
+DATA_DESC = data_desc_path.read_text(encoding="utf-8")
+
 qc = QueryChat(
     df.copy(),
     "global_education",
     greeting=GREETING,
+    data_description=DATA_DESC,
     client=llm_client,
 )
 
