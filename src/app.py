@@ -921,7 +921,7 @@ def server(input, output, session):
             labels={"Education_Level": "Education Level", "Completion_Rate": "Completion Rate (%)"},
             range_y=[0,100]
         )
-        
+
         return fig
 
     @render.download(filename="global_education_filtered.csv")
