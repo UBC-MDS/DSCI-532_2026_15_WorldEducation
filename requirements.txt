@@ -2,7 +2,7 @@ matplotlib==3.10.8
 numpy==2.4.2
 seaborn==0.13.2
 pandas==2.3.3
-shiny==1.4
+shiny==1.4.0
 plotly==6.5.2
 scienceplots==2.2.0
 scikit-learn==1.8.0
@@ -11,5 +11,5 @@ pycountry==24.6.1
 shinywidgets==0.7.1
 anywidget==0.9.21
 chatlas==0.15.2
-dotenv==0.9.9
+python-dotenv==1.2.2
 querychat==0.5.1

@@ -16,6 +16,8 @@ dependencies:
   - pycountry
   - shinywidgets
   - anywidget
-  - chatlas
-  - dotenv
-  - querychat
+  - python-dotenv
+  - pip
+  - pip:
+    - chatlas
+    - querychat
