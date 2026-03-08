@@ -1,26 +1,17 @@
 from shiny import App, ui, render, reactive
 from shinywidgets import output_widget, render_widget, render_plotly
-from shiny.ui import update_selectize  # earlier version to be removed
-
-# libraries for data processing
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import StandardScaler  # earlier version to be removed
-
-# libraries for visualization
-import matplotlib.pyplot as plt  # earlier version to be removed
-import matplotlib.gridspec as gridspec  # earlier version to be removed
 import plotly.express as px
-import seaborn as sns  # earlier version to be removed
-import scienceplots  # earlier version to be removed
-import pycountry  # earlier version to be removed
-
-# libraries for LLM ChatBot
 import os
 import chatlas as clt
 from pathlib import Path
 from dotenv import load_dotenv
 from querychat import QueryChat
+
+load_dotenv()
+
+anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
 
 # ==========================================
 #   SETUP & DATA LOADING
@@ -77,9 +68,6 @@ def metric_label(metric_key):
         if metric_key in group:
             return group[metric_key]
     return metric_key
-
-# Initialize LLM Client
-load_dotenv(Path(__file__).parent / ".env")
 
 # Initialize the correct Chatlas Client inside the server so it's safe for multi-users
 if os.environ.get("USE_LOCAL_LLM", "False").lower() == "true":
