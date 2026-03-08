@@ -5,7 +5,43 @@ All notable changes to the World Education Dashboard project will be documented 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.0] - 2026-02-28
+## [0.3.0](https://github.com/UBC-MDS/DSCI-532_2026_15_WorldEducation/releases/tag/v0.3.0) - 2026-03-08
+
+### Added
+
+- Tabbed layout: Overview, Completion & Literacy, and Data Table under Main Dashboard (`#48`, `#52`).
+- "Query with Chat" tab with AI-powered data filtering (QueryChat + Chatlas; Anthropic, Ollama, GitHub) (`#53`).
+- Education level by region bar chart and completion rate gap by region bar chart (`#50`, `#52`).
+- KPI cards that update to reflect the selected map metric (`#52`).
+- Data description and greeting content for the chat assistant (`#53`).
+- Website title "World Education Dashboard" in the UI (`#40`).
+- Shiny 1.5.1, anthropic, querychat, chatlas, python-dotenv in requirements and environment (`#54`, `#53`).
+
+### Changed
+
+- Bar chart changed from completion by gender/level to completion rate gap by region (`#52`, `#50`).
+- Filters cleaned up; region filter applies consistently to map, KPIs, charts, and table; filter rule to avoid dropping columns (`#52`).
+- Map metric selector moved into the Overview tab (`#52`).
+- Literacy plot renamed, formatting improved (colors, ticks), dynamic axis range, and % on axis label (`#50`).
+- KPI card wording updated (`#50`).
+
+### Fixed
+
+- Anthropic API key handling in the app (`#54`, `#55`).
+- Extra nav panel lines in the UI (`#53`).
+- Minor typo and package/environment setup for LLM (`#53`).
+
+### Known Issues
+
+- Data description for the chat may be loaded from the wrong file (greeting.md vs data_desc.md) in app.py — verify and fix if intentional.
+
+### Reflection
+
+The dashboard now delivers on all three job stories with a cleaner, more structured interface. The tabbed layout (Overview, Completion & Literacy, Data Table) keeps the user experience focused and reduces cognitive load compared to the single-page M2 design. The new AI-powered "Query with Chat" tab is a significant addition, enabling natural-language row filtering for users who want to explore the data beyond the predefined filters. The dynamic KPI cards and improved chart formatting (color consistency, axis labels, dynamic ranges) make the dashboard more polished and informative.
+
+Current limitations include the lack of time-series data, all indicators represent a single snapshot in time, which restricts trend analysis. The AI chat is constrained to row filtering only and cannot generate new visualizations or perform statistical analysis. The choropleth map relies on exact country name matching with Plotly, which may silently drop some countries. Planned improvements include fixing the data description file path for the chat assistant, adding tooltips to charts, and exploring a year-over-year comparison if data permits. No intentional deviations from DSCI 531 visualization best practices were made in this milestone.
+
+## [0.2.0](https://github.com/UBC-MDS/DSCI-532_2026_15_WorldEducation/releases/tag/v0.2.0) - 2026-02-28
 
 ### Added
 
@@ -24,11 +60,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- [Document any bugs or issues that were resolved in this release]
+- No bugs were resolved in this release.
 
 ### Known Issues
 
-- [Document any known limitations or bugs that still exist]
+- No known issues at the time of this release.
 
 ### Reflection
 
@@ -68,9 +104,10 @@ The final implementation closely follows the M1 sketch and M2 spec with the foll
 
 All components from the M2 spec component inventory have been implemented, and the reactivity diagram accurately reflects the final application structure.
 
-## [0.1.0] - 2026-02-14
+## [0.1.0](https://github.com/UBC-MDS/DSCI-532_2026_15_WorldEducation/releases/tag/v0.1.0) - 2026-02-14
 
 ### Added
+
 - Initial project setup and repository structure
 - Data processing pipeline for Global Education dataset from Kaggle
 - Exploratory Data Analysis (EDA) notebook
@@ -81,11 +118,13 @@ All components from the M2 spec component inventory have been implemented, and t
 - Support for analyzing out-of-school rates, completion rates, proficiency levels, literacy rates, and enrollment figures
 
 ### Documentation
+
 - README with project overview and dashboard links
 - CODE_OF_CONDUCT.md
 - CONTRIBUTING.md
 - LICENSE
 - Team information
 
+[0.3.0]: https://github.com/UBC-MDS/DSCI-532_2026_15_WorldEducation/releases/tag/v0.3.0
 [0.2.0]: https://github.com/UBC-MDS/DSCI-532_2026_15_WorldEducation/releases/tag/v0.2.0
 [0.1.0]: https://github.com/UBC-MDS/DSCI-532_2026_15_WorldEducation/releases/tag/v0.1.0
