@@ -1,20 +1,30 @@
 from shiny import App, ui, render, reactive
 from shinywidgets import output_widget, render_widget, render_plotly
-from shiny.ui import update_selectize
+from shiny.ui import update_selectize  # earlier version to be removed
 
 # libraries for data processing
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler  # earlier version to be removed
 
 # libraries for visualization
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
+import matplotlib.pyplot as plt  # earlier version to be removed
+import matplotlib.gridspec as gridspec  # earlier version to be removed
 import plotly.express as px
-import seaborn as sns
-import scienceplots
-import pycountry
+import seaborn as sns  # earlier version to be removed
+import scienceplots  # earlier version to be removed
+import pycountry  # earlier version to be removed
 
+# libraries for LLM ChatBot
+import os
+import chatlas as clt
+from pathlib import Path
+from dotenv import load_dotenv
+from querychat import QueryChat
+
+# ==========================================
+#   SETUP & DATA LOADING
+# ==========================================
 # Load data
 df = pd.read_csv("data/processed/processed_global_education.csv", encoding='latin-1', index_col=0)
 table_feature_choices = df.columns.tolist()
@@ -68,11 +78,56 @@ def metric_label(metric_key):
             return group[metric_key]
     return metric_key
 
+# Initialize LLM Client
+load_dotenv(Path(__file__).parent / ".env")
+
+# Initialize the correct Chatlas Client inside the server so it's safe for multi-users
+if os.environ.get("USE_LOCAL_LLM", "False").lower() == "true":
+    llm_client = clt.ChatOllama(model="qwen3.5")
+    ACTIVE_MODEL = "Local: Ollama (Qwen 3.5)"
+    
+elif os.environ.get("GITHUB_TOKEN"):
+    llm_client = clt.ChatGithub(model="gpt-4o-mini")
+    ACTIVE_MODEL = "Cloud: GitHub (GPT-4o-Mini)"
+    
+elif os.environ.get("ANTHROPIC_API_KEY"):
+    llm_client = clt.ChatAnthropic(model="claude-haiku-4-5-20251001") 
+    ACTIVE_MODEL = "Cloud: Anthropic (Claude Haiku 4.5)"
+    
+else:
+    llm_client = None
+    ACTIVE_MODEL = "NONE (Check .env file!)"
+
+# Print in terminal to see LLM successfully loaded
+print(f"\n---> SUCCESS: LLM Loaded - {ACTIVE_MODEL} <---\n")
+
+# QueryChat Setup
+# Read greeting
+greeting_path = Path(__file__).parent / "greeting.md"
+GREETING = greeting_path.read_text(encoding="utf-8")
+
+# Read data description
+data_desc_path = Path(__file__).parent / "greeting.md"
+DATA_DESC = data_desc_path.read_text(encoding="utf-8")
+
+qc = QueryChat(
+    df.copy(),
+    "global_education",
+    greeting=GREETING,
+    data_description=DATA_DESC,
+    client=llm_client,
+)
+
+
+# ==========================================
+#   UI DEFINITION
+# ==========================================
 app_ui = ui.page_fluid(
     ui.tags.head(
         ui.tags.title("World Education Dashboard")
     ),
     ui.navset_tab(
+        # --- Tab 1: Main Dashboard ---
         ui.nav_panel(
             "Main Dashboard",
             ui.h2("World Education Dashboard"),
@@ -184,17 +239,50 @@ app_ui = ui.page_fluid(
                 ),
             ),
         ),
+        # --- Tab 2: Query with Chat ---
         ui.nav_panel(
             "Query with Chat",
-            "LLM query and plots"
-            # ADD LAYOUT HERE
+            # Show actived model name into the header!
+            ui.h2(f"AI-Powered Data Filtering (Powered by {ACTIVE_MODEL})"),
+            ui.layout_sidebar(
+                qc.sidebar(), # Uses querychat sidebar
+                ui.layout_column_wrap(
+                    ui.card(
+                        ui.card_header(
+                            ui.output_text("chat_title"),
+                            ui.download_button("download_chat_data", "Download CSV", class_="btn-success btn-sm"),
+                                class_="d-flex justify-content-between align-items-center"
+                        ),
+                        ui.output_data_frame("chat_tbl"),
+                    ),
+                    ui.layout_column_wrap(
+                        ui.card(
+                            ui.card_header("Literacy Rate Scatterplot (Filtered)"),
+                            output_widget("chat_scatter"),
+                        ),
+                        ui.card(
+                            ui.card_header("Avg Education Level by Region (Filtered)"),
+                            output_widget("chat_bar"),
+                        ),
+                        width=1/2
+                    ),
+                    width=1,
+                    heights_equal="row"
+                ),
+                # Set layout to a fixed height,
+                height="80vh" 
+            )
         )
     ),
 )
 
-
+# ==========================================
+#   SERVER LOGIC
+# ==========================================
 def server(input, output, session):
-
+    # ----------------------------------------
+    # TAB 1 LOGIC (Main Dashboard)
+    # ----------------------------------------
     # 1) Get dataframe
     @reactive.Calc
     def processed_df() -> pd.DataFrame:
@@ -586,7 +674,6 @@ def server(input, output, session):
         -------
         px.bar
             Plotly express bar plot object.
-        
         """
         d = region_completion_rate_df()
     
@@ -709,5 +796,137 @@ def server(input, output, session):
             selected=region_choices,
             session=session
         )
+
+    # ----------------------------------------
+    # TAB 2 LOGIC (QueryChat)
+    # ----------------------------------------
+    qc_vals = qc.server()
+
+    @render.text
+    def chat_title():
+        return qc_vals.title() or "Global Education Dataset"
+
+    @output
+    @render.data_frame
+    def chat_tbl():
+        d = qc_vals.df()
+
+        # Drop the unwanted index column
+        d = d.drop(columns=["Unnamed: 0"], errors="ignore")
+        
+        # Define categorical columns
+        cat_cols = ["Countries and areas", "Region", "iso3"]
+        
+        # Grab all the remaining numerical columns
+        num_cols = [c for c in d.columns if c not in cat_cols]
+        
+        # Combine the lists to create final display order
+        final_order = cat_cols + num_cols
+
+        # Apply the order to the dataframe
+        valid_cols = [c for c in final_order if c in d.columns]
+        
+        return render.DataGrid(
+            d[valid_cols], 
+            selection_mode="rows", 
+            height="250px"
+        )
+
+    @output
+    @render_plotly
+    def chat_scatter():
+        """
+        Create scatterplot of male vs female literacy rates by region,
+        and filtered by user feed AI commands.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        plotly.express.scatter
+            Scatterplot of male vs female literacy rate by region.
+        """
+        d = qc_vals.df()
+        if d.empty:
+            return px.scatter(title="No Data Available for this query")
+            
+        fig = px.scatter(
+            d, 
+            x="Youth_15_24_Literacy_Rate_Male", 
+            y="Youth_15_24_Literacy_Rate_Female",
+            color="Region", 
+            hover_name="Countries and areas", 
+            color_discrete_sequence=px.colors.qualitative.Set2,
+            labels={
+                "Region": "Region", 
+                "Youth_15_24_Literacy_Rate_Male": " Male Literacy Rate (%)", 
+                "Youth_15_24_Literacy_Rate_Female": "Female Literacy Rate (%)"
+            }
+        )
+        return fig
+
+    @output
+    @render_plotly
+    def chat_bar():
+        """
+        Create bar plot of education level completed separated by region,
+        and filtered by user feed AI command.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        px.bar
+            Plotly express bar plot object.
+        """
+        d = qc_vals.df()
+        if d.empty:
+            return px.bar(title="No Data Available for this query")
+            
+        d_melt = d[[
+            "Completion_Avg_Primary", 
+            "Completion_Avg_Lower_Secondary",
+            "Completion_Avg_Upper_Secondary", 
+            "Region", 
+            "iso3"
+        ]].copy()
+        
+        d_melt = pd.melt(
+            d_melt, 
+            id_vars=["Region", "iso3"], 
+            value_vars=[
+                "Completion_Avg_Primary", 
+                "Completion_Avg_Lower_Secondary", 
+                "Completion_Avg_Upper_Secondary",
+            ],
+            value_name="Completion_Rate", 
+            var_name="Completion_Rate_Group", 
+            ignore_index=True
+        )
+        d_melt["Education_Level"] = d_melt["Completion_Rate_Group"].str.split("_").str[2:].str.join(" ")
+        
+        d_grouped = d_melt[["Region", "Education_Level", "Completion_Rate"]].groupby(["Region", "Education_Level"]).mean().reset_index()
+
+        fig = px.bar(
+            d_grouped, 
+            x="Education_Level", 
+            y="Completion_Rate", 
+            color="Region",
+            color_discrete_sequence=px.colors.qualitative.Set2, barmode="group",
+            category_orders={"Education_Level": ["Primary", "Lower Secondary", "Upper Secondary"]},
+            labels={"Education_Level": "Education Level", "Completion_Rate": "Completion Rate (%)"},
+            range_y=[0,100]
+        )
+
+        return fig
+
+    @render.download(filename="global_education_filtered.csv")
+    def download_chat_data():
+        yield qc_vals.df().to_csv(index=False).encode("utf-8")
+
 
 app = App(app_ui, server)
