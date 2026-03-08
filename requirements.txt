@@ -11,5 +11,6 @@ pycountry==24.6.1
 shinywidgets==0.7.1
 anywidget==0.9.21
 chatlas==0.15.2
+anthropic
 python-dotenv==1.2.2
 querychat==0.5.1
