@@ -107,7 +107,7 @@ greeting_path = Path(__file__).parent / "greeting.md"
 GREETING = greeting_path.read_text(encoding="utf-8")
 
 # Read data description
-data_desc_path = Path(__file__).parent / "greeting.md"
+data_desc_path = Path(__file__).parent / "data_desc.md"
 DATA_DESC = data_desc_path.read_text(encoding="utf-8")
 
 qc = QueryChat(
