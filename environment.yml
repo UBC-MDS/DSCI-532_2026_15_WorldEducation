@@ -18,6 +18,8 @@ dependencies:
   - anywidget
   - python-dotenv
   - pip
+  - pytest
+  - pytest-playwright
   - pip:
     - chatlas
     - querychat
