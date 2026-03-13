@@ -227,4 +227,7 @@ def processed_df(df) -> pd.DataFrame:
 if __name__ == "__main__":
     df = pd.read_csv('data/raw/Global_Education.csv', encoding='latin-1')
     pro_df = processed_df(df)
+    # Save as CSV (for backward compatibility)
     pro_df.to_csv("data/processed/processed_global_education.csv")
+    # Save as Parquet (for lazy loading with DuckDB)
+    pro_df.to_parquet("data/processed/processed_global_education.parquet", index=False)
