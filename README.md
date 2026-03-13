@@ -17,13 +17,23 @@ The dashboard leverages data from UNESCO Institute for Statistics, UNICEF, and U
 
 ## Features
 
-- **Interactive World Map**: Visualize education indicators globally with color-coded choropleth maps
-- **Regional Filtering**: Focus analysis on specific continents
-- **Gender Analysis**: Compare male and female education outcomes across multiple metrics
-- **Completion Rate Tracking**: Monitor student progression from primary through upper secondary education
-- **Literacy Comparison**: Analyze youth literacy rates by gender and region
-- **KPI Cards**: Quick insights into primary completion rates and gender disparities
-- **Data Table**: Detailed country-level data for transparency and further analysis
+The dashboard is organized into two main tabs:
+
+**Main Dashboard** (with sub-tabs):
+
+- **Overview**: Interactive world map (choropleth) for any selected education metric; KPI cards that update to match the chosen map metric (average, vs world, coverage)
+- **Completion & Literacy**: Education level by region bar chart; completion rate gap by region; male vs female literacy scatter by region
+- **Data Table**: Country-level data with configurable columns, filtered by selected regions
+
+**Query with Chat**:
+
+- AI-powered row filtering of the dataset (e.g., “Show only Asian countries”, “Filter to regions with Primary Completion above 90%”). Supports Anthropic, local Ollama, or GitHub-backed LLM; optional setup via `.env`.
+
+Additional capabilities:
+
+- **Regional Filtering**: Focus on specific continents; filters apply to map, KPIs, charts, and table
+- **Map Metric Selection**: Choose from grouped metrics (Access, Completion, Learning, Context) for the choropleth
+- **KPI Cards**: Reflect the currently selected map metric for quick context
 
 ## Live Dashboard
 
@@ -40,8 +50,8 @@ Access the deployed dashboard here:
 
 ```bash
 # Clone the repository
-git clone https://github.com/UBC-MDS/DSCI-532_2025_15_WorldEducation.git
-cd DSCI-532_2025_15_WorldEducation
+git clone https://github.com/UBC-MDS/DSCI-532_2026_15_WorldEducation.git
+cd DSCI-532_2026_15_WorldEducation
 
 # Create and activate the conda environment
 conda env create -f environment.yml
@@ -52,8 +62,8 @@ conda activate 532
 
 ```bash
 # Clone the repository
-git clone https://github.com/UBC-MDS/DSCI-532_2025_15_WorldEducation.git
-cd DSCI-532_2025_15_WorldEducation
+git clone https://github.com/UBC-MDS/DSCI-532_2026_15_WorldEducation.git
+cd DSCI-532_2026_15_WorldEducation
 
 # Create a virtual environment (optional but recommended)
 python -m venv venv
@@ -73,6 +83,8 @@ shiny run src/app.py
 
 The dashboard will be available at `http://localhost:8000` (or the port shown in your terminal).
 
+**Optional — AI (Query with Chat) tab:** To use the "Query with Chat" tab, create a `.env` file in the project root with one of the following: `ANTHROPIC_API_KEY=your_key` for Anthropic, `USE_LOCAL_LLM=true` for a local Ollama instance, or `GITHUB_TOKEN=your_token` for a GitHub-backed LLM. Without any of these, the app runs normally but the chat tab will not have an active model.
+
 ### Project Structure
 
 ```
@@ -83,11 +95,14 @@ The dashboard will be available at `http://localhost:8000` (or the port shown in
 ├── notebooks/                  # Exploratory data analysis
 ├── src/
 │   ├── app.py                  # Main Shiny application
-│   └── process_data.py         # Data processing scripts
+│   ├── process_data.py         # Data processing scripts
+│   ├── greeting.md             # Chat assistant greeting and suggestions
+│   └── data_desc.md            # Data description for the AI chat (row-filtering only)
 ├── report/                     # Project documentation and specs
 ├── img/                        # Images and demo files
 ├── requirements.txt            # Python dependencies
-├── environment.yml             # Conda environment specification
+├── environment.yml            # Conda environment specification
+├── .env                        # Optional: API keys for Query with Chat (not in repo)
 └── README.md                   # This file
 ```
 
@@ -115,3 +130,5 @@ See [LICENSE](LICENSE) for details.
 ## Team
 
 See [team.txt](team.txt) for team member information.
+
+
