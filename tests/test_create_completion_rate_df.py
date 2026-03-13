@@ -53,7 +53,11 @@ def sample_output_df():
     return df
 
 def test_correct_output(sample_input_df, sample_output_df):
-    """Test that the function is giving the correct output"""
+    """Test that the function is giving the correct output.
+    
+    This is important because if the dataframe operations are not correct then 
+    the bar plot showing the difference is school completion by sex will be incorrect.
+    """
     df_test = create_sex_completion_rate_df(sample_input_df).select_dtypes(include='number')
     df_val = sample_output_df.select_dtypes(include='number')  # type: ignore
 
