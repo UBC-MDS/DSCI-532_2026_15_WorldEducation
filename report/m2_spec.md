@@ -73,3 +73,13 @@ flowchart TD
 	•	Transformation: selects completion rate columns by sex and education level, melts into long format, extracts Sex and Education_Level, and groups by (Sex, Education_Level) and computes mean completion rate
 
 	•	Consumed by: education_level_by_gender_bar, elementary_completion_box, el_completion_rate_gender_difference_box
+
+### Testing
+
+- 4 tests will be added
+  - 1 unit test
+    - This test will confirm that the dataframe operations need to achieve the correct data format for the bar chart that shows education level completion by gender is correctly done. This test is needed otherwise the displayed data may not be accurate.
+  - 3 full app tests
+    - Test that the displayed dataframe has the correct size. This test is needed to ensure the loaded data is correct and therefore the data for all plots has the correct starting starting point. Without this test we can't be sure any of the displayed plots are correct.
+    - Test that the regional filters are operating correctly. Without this a user may believe they are observing region specific data but actually are not.
+    - Test the reset filter button. Without this test we can't be sure users are able to reset the dashboard. They may believe they are looking at unfiltered data but are not.

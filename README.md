@@ -95,6 +95,15 @@ The dashboard will be available at `http://localhost:8000` (or the port shown in
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute to this project.
 
+### Testing
+
+To test the dashboard make sure you have installed the required libraries as shown above.
+
+cd to the dashboard root directory and run:
+```
+ pytest
+```
+
 ## Data Source
 
 The dataset is sourced from [Kaggle - World Educational Data](https://www.kaggle.com/datasets/nelgiriyewithana/world-educational-data/data), compiled from UNESCO Institute for Statistics, UNICEF, and UN Statistics Division.

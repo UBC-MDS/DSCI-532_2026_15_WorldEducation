@@ -106,6 +106,57 @@ qc = QueryChat(
     client=llm_client,
 )
 
+# Refactor out functions for unit testing
+
+def create_sex_completion_rate_df(d):
+    """Melt columns with data about education level completion.
+
+    This makes it possible create education_level_by_gender_bar bar plot.
+        
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    pd.Dataframe
+        The melted dataframe
+    """
+    d = d[[
+            "Completion_Rate_Primary_Male",
+            "Completion_Rate_Primary_Female",
+            "Completion_Rate_Lower_Secondary_Male",
+            "Completion_Rate_Lower_Secondary_Female",
+            "Completion_Rate_Upper_Secondary_Male",
+            "Completion_Rate_Upper_Secondary_Female",
+            "Region",
+            "iso3"
+        ]]
+    d = pd.melt(
+        d, 
+        id_vars=["Region", "iso3"], 
+        value_vars=[
+            "Completion_Rate_Primary_Male",
+            "Completion_Rate_Primary_Female",
+            "Completion_Rate_Lower_Secondary_Male",
+            "Completion_Rate_Lower_Secondary_Female",
+            "Completion_Rate_Upper_Secondary_Male",
+            "Completion_Rate_Upper_Secondary_Female",
+        ],
+        value_name="Completion_Rate",
+        var_name="Completion_Rate_Group",
+        ignore_index=True
+        )
+    d["Sex"] = d["Completion_Rate_Group"].str.split("_").str[-1]
+    d["Education_Level"] = d["Completion_Rate_Group"].str.split("_").str[2:-1].str.join(" ")
+    
+    d = (
+        d[["Sex", "Education_Level", "Completion_Rate"]]
+        .groupby(["Sex", "Education_Level"])
+        .mean()
+        .reset_index()
+    )
+    return d
 
 # ==========================================
 #   UI DEFINITION
@@ -346,42 +397,7 @@ def server(input, output, session):
         """
         d = filtered_df().copy()
     
-        d = d[[
-                "Completion_Rate_Primary_Male",
-                "Completion_Rate_Primary_Female",
-                "Completion_Rate_Lower_Secondary_Male",
-                "Completion_Rate_Lower_Secondary_Female",
-                "Completion_Rate_Upper_Secondary_Male",
-                "Completion_Rate_Upper_Secondary_Female",
-                "Region",
-                "iso3"
-            ]]
-        d = pd.melt(
-            d, 
-            id_vars=["Region", "iso3"], 
-            value_vars=[
-                "Completion_Rate_Primary_Male",
-                "Completion_Rate_Primary_Female",
-                "Completion_Rate_Lower_Secondary_Male",
-                "Completion_Rate_Lower_Secondary_Female",
-                "Completion_Rate_Upper_Secondary_Male",
-                "Completion_Rate_Upper_Secondary_Female",
-            ],
-            value_name="Completion_Rate",
-            var_name="Completion_Rate_Group",
-            ignore_index=True
-            )
-        d["Sex"] = d["Completion_Rate_Group"].str.split("_").str[-1]
-        d["Education_Level"] = d["Completion_Rate_Group"].str.split("_").str[2:-1].str.join(" ")
-    
-        d = (
-            d[["Sex", "Education_Level", "Completion_Rate"]]
-            .groupby(["Sex", "Education_Level"])
-            .mean()
-            .reset_index()
-        )
-
-        return d
+        return create_sex_completion_rate_df(d)
     
     @reactive.Calc
     def region_completion_rate_df():
