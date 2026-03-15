@@ -344,6 +344,7 @@ app_ui = ui.page_fluid(
 #   SERVER LOGIC
 # ==========================================
 def server(input, output, session):
+    selected_region_click = reactive.Value(None)
     # ----------------------------------------
     # TAB 1 LOGIC (Main Dashboard)
     # ----------------------------------------
@@ -382,13 +383,25 @@ def server(input, output, session):
             The filtered world education dataframe
         """
         return filtered_table().execute()
+        
+    @reactive.Calc
+    def clicked_filtered_df():
+        d = filtered_df().copy()
+    
+        clicked_region = selected_region_click()
+    
+        if clicked_region is not None:
+            d = d[d["Region"] == clicked_region]
+    
+        return d
+        
     @reactive.Calc
     def selected_metric():
         return input.input_map_metric()
     
     @reactive.Calc
     def filtered_metric_series():
-        d = filtered_df()
+        d = clicked_filtered_df()
         metric = selected_metric()
         return d[metric].dropna()
     
@@ -573,7 +586,7 @@ def server(input, output, session):
         plotly.express.scatter
             Scatterplot of male vs female literacy rate by region.
         """
-        d = filtered_df()
+        d = clicked_filtered_df()
 
         fig = px.scatter(
             d,
@@ -632,7 +645,7 @@ def server(input, output, session):
         shiny.render.DataGrid
             Tabular data to be displayed.
         """
-        d = filtered_df()
+        d = clicked_filtered_df()
         selected_cols = input.input_table_features()
     
         if not selected_cols:
@@ -686,6 +699,7 @@ def server(input, output, session):
             x="Education_Level",
             y="Completion_Rate_Gap",
             color="Region",
+            custom_data=["Region"],
             color_discrete_map=region_color_map,
             barmode="group",
             category_orders={
@@ -702,6 +716,20 @@ def server(input, output, session):
         fig.update_yaxes(dtick=2)
     
         return fig
+        
+    @reactive.effect
+    def _capture_region_click():
+        fig = completion_rate_gap_by_region_bar.widget
+        if fig is None:
+            return
+    
+        def handle_click(trace, points, state):
+            if points.point_inds:
+                idx = points.point_inds[0]
+                region = trace.customdata[idx][0]
+                selected_region_click.set(region)
+    
+        fig.data[0].on_click(handle_click)
     
     @output
     @render_plotly
@@ -800,7 +828,7 @@ def server(input, output, session):
     def metric_coverage_box():
         metric = selected_metric()
         label = metric_label(metric)
-        d = filtered_df()
+        d = clicked_filtered_df()
     
         n_available = d[metric].notna().sum()
         n_total = len(d)
