@@ -352,11 +352,29 @@ app_ui = ui.page_fluid(
 #   SERVER LOGIC
 # ==========================================
 def server(input, output, session):
-    selected_region_click = reactive.Value(None)
+    selected_region_click = reactive.Value([])
+    
+    def toggle_region(region):
+        current = list(input.input_region())
+    
+        if region in current:
+            current.remove(region)
+        else:
+            current.append(region)
+    
+        selected_region_click.set(current)
+    
+        ui.update_checkbox_group(
+            "input_region",
+            selected=current,
+            session=session
+        )
+
     # ----------------------------------------
     # TAB 1 LOGIC (Main Dashboard)
     # ----------------------------------------
     # 1) Get filtered ibis table (lazy - no data loaded yet)
+    
     @reactive.Calc
     def filtered_table():
         """Apply region filters at the database level using ibis.
@@ -392,20 +410,12 @@ def server(input, output, session):
         """
         return filtered_table().execute()
         
-    @reactive.Calc
-    def clicked_filtered_df():
-        d = filtered_df().copy()
-    
-        clicked_region = selected_region_click()
-    
-        if clicked_region is not None:
-            d = d[d["Region"] == clicked_region]
-    
-        return d
     @render.text
     def active_region():
-        region = selected_region_click()
-        return f"Selected from chart: {region}" if region else "Selected from chart: None"
+        regions = selected_region_click()
+        if not regions:
+            return "Selected from chart: None"
+        return "Selected from chart: " + ", ".join(regions)
         
     @reactive.Calc
     def selected_metric():
@@ -413,7 +423,7 @@ def server(input, output, session):
     
     @reactive.Calc
     def filtered_metric_series():
-        d = clicked_filtered_df()
+        d = filtered_df()
         metric = selected_metric()
         return d[metric].dropna()
     
@@ -459,7 +469,7 @@ def server(input, output, session):
         pd.Dataframe
             The melted dataframe
         """
-        d = clicked_filtered_df().copy()
+        d = filtered_df().copy()
     
         d = d[[
                 "Completion_Avg_Primary",
@@ -508,7 +518,7 @@ def server(input, output, session):
             
         """
         
-        d = clicked_filtered_df().copy()
+        d = filtered_df().copy()
     
         d = d[
             [
@@ -560,7 +570,7 @@ def server(input, output, session):
         plotly.express.chorpleth
             Interactive world map figure.
         """
-        d = clicked_filtered_df()
+        d = filtered_df()
         metric = input.input_map_metric()
         fig = px.choropleth(
             d, 
@@ -598,7 +608,7 @@ def server(input, output, session):
         plotly.express.scatter
             Scatterplot of male vs female literacy rate by region.
         """
-        d = clicked_filtered_df()
+        d = filtered_df()
 
         fig = px.scatter(
             d,
@@ -657,7 +667,7 @@ def server(input, output, session):
                 if points.point_inds:
                     idx = points.point_inds[0]
                     region = trace.customdata[idx][0]
-                    selected_region_click.set(region)
+                    toggle_region(region)
     
             trace.on_click(handle_click)
         
@@ -675,7 +685,7 @@ def server(input, output, session):
         shiny.render.DataGrid
             Tabular data to be displayed.
         """
-        d = clicked_filtered_df()
+        d = filtered_df()
         selected_cols = input.input_table_features()
     
         if not selected_cols:
@@ -760,7 +770,7 @@ def server(input, output, session):
                 if points.point_inds:
                     idx = points.point_inds[0]
                     region = trace.customdata[idx][0]
-                    selected_region_click.set(region)
+                    toggle_region(region)
     
             trace.on_click(handle_click)
     
@@ -816,7 +826,7 @@ def server(input, output, session):
                 if points.point_inds:
                     idx = points.point_inds[0]
                     region = trace.customdata[idx][0]
-                    selected_region_click.set(region)
+                    toggle_region(region)
     
             trace.on_click(handle_click)
     
@@ -879,7 +889,7 @@ def server(input, output, session):
     def metric_coverage_box():
         metric = selected_metric()
         label = metric_label(metric)
-        d = clicked_filtered_df()
+        d = filtered_df()
     
         n_available = d[metric].notna().sum()
         n_total = len(d)
@@ -903,6 +913,8 @@ def server(input, output, session):
     @reactive.effect
     @reactive.event(input.select_all_regions)
     def _select_all_regions():
+        selected_region_click.set(region_choices)
+
         ui.update_checkbox_group(
             "input_region",
             selected=region_choices,
@@ -911,11 +923,19 @@ def server(input, output, session):
     @reactive.effect
     @reactive.event(input.clear_region_click)
     def _clear_region_click():
-        selected_region_click.set(None)
+        selected_region_click.set(region_choices)
+    
+        ui.update_checkbox_group(
+            "input_region",
+            selected=region_choices,
+            session=session
+        )
 
     @reactive.effect
     @reactive.event(input.reset_regions)
     def _reset_regions():
+        selected_region_click.set(region_choices)
+
         ui.update_checkbox_group(
             "input_region",
             selected=region_choices,
