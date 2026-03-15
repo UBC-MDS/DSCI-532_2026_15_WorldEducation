@@ -206,11 +206,19 @@ app_ui = ui.page_fluid(
                                 "Reset",
                                 class_="btn-outline-secondary btn-sm"
                             ),
+                            ui.div(
+                                ui.input_action_button(
+                                    "clear_region_click",
+                                    "Clear chart selection",
+                                    class_="btn-outline-danger btn-sm mt-2"
+                                )
+                            ),
                         ),
                         ui.p(
                             "The selected regions apply to the map and KPI cards in the Overview tab, charts in the Completion & Literacy tab, and the table in the Data Table tab.",
                             class_="text-muted small mt-2"
                         ),
+                        ui.output_text("active_region"),
                     ),
                     width=300,
                 ),
@@ -394,6 +402,10 @@ def server(input, output, session):
             d = d[d["Region"] == clicked_region]
     
         return d
+    @render.text
+    def active_region():
+        region = selected_region_click()
+        return f"Selected from chart: {region}" if region else "Selected from chart: None"
         
     @reactive.Calc
     def selected_metric():
@@ -447,7 +459,7 @@ def server(input, output, session):
         pd.Dataframe
             The melted dataframe
         """
-        d = filtered_df().copy()
+        d = clicked_filtered_df().copy()
     
         d = d[[
                 "Completion_Avg_Primary",
@@ -496,7 +508,7 @@ def server(input, output, session):
             
         """
         
-        d = filtered_df().copy()
+        d = clicked_filtered_df().copy()
     
         d = d[
             [
@@ -548,7 +560,7 @@ def server(input, output, session):
         plotly.express.chorpleth
             Interactive world map figure.
         """
-        d = filtered_df()
+        d = clicked_filtered_df()
         metric = input.input_map_metric()
         fig = px.choropleth(
             d, 
@@ -594,6 +606,7 @@ def server(input, output, session):
             y="Youth_15_24_Literacy_Rate_Female",
             color="Region",
             hover_name="Countries and areas",
+            custom_data=["Region"],
             color_discrete_map=region_color_map,
             category_orders={"Region": region_choices},
             labels={
@@ -631,6 +644,23 @@ def server(input, output, session):
 
         return fig
 
+    @reactive.effect
+    def _capture_scatter_click():
+        fig = literacy_scatterplot.widget
+        if fig is None:
+            return
+    
+        for trace in fig.data:
+            trace._click_callbacks.clear()
+    
+            def handle_click(trace, points, state):
+                if points.point_inds:
+                    idx = points.point_inds[0]
+                    region = trace.customdata[idx][0]
+                    selected_region_click.set(region)
+    
+            trace.on_click(handle_click)
+        
     @output
     @render.data_frame
     def tbl():
@@ -718,18 +748,21 @@ def server(input, output, session):
         return fig
         
     @reactive.effect
-    def _capture_region_click():
+    def _capture_gap_bar_click():
         fig = completion_rate_gap_by_region_bar.widget
         if fig is None:
             return
     
-        def handle_click(trace, points, state):
-            if points.point_inds:
-                idx = points.point_inds[0]
-                region = trace.customdata[idx][0]
-                selected_region_click.set(region)
+        for trace in fig.data:
+            trace._click_callbacks.clear()
     
-        fig.data[0].on_click(handle_click)
+            def handle_click(trace, points, state):
+                if points.point_inds:
+                    idx = points.point_inds[0]
+                    region = trace.customdata[idx][0]
+                    selected_region_click.set(region)
+    
+            trace.on_click(handle_click)
     
     @output
     @render_plotly
@@ -752,6 +785,7 @@ def server(input, output, session):
             x="Education_Level",
             y="Completion_Rate",
             color="Region",
+            custom_data=["Region"],
             color_discrete_map=region_color_map,
             barmode="group",
             category_orders={
@@ -768,7 +802,24 @@ def server(input, output, session):
         fig.update_yaxes(dtick=20)
     
         return fig
-        
+
+    @reactive.effect
+    def _capture_completion_bar_click():
+        fig = education_level_by_region_bar.widget
+        if fig is None:
+            return
+    
+        for trace in fig.data:
+            trace._click_callbacks.clear()
+    
+            def handle_click(trace, points, state):
+                if points.point_inds:
+                    idx = points.point_inds[0]
+                    region = trace.customdata[idx][0]
+                    selected_region_click.set(region)
+    
+            trace.on_click(handle_click)
+    
     # KPI 1
     @render.ui
     def metric_average_box():
@@ -857,6 +908,10 @@ def server(input, output, session):
             selected=region_choices,
             session=session
         )
+    @reactive.effect
+    @reactive.event(input.clear_region_click)
+    def _clear_region_click():
+        selected_region_click.set(None)
 
     @reactive.effect
     @reactive.event(input.reset_regions)
