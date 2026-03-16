@@ -70,6 +70,19 @@ map_metric_choices = {
     },
 }
 def metric_label(metric_key):
+    """Return a human-readable label for a metric key.
+
+    Parameters
+    ----------
+    metric_key : str
+        The internal metric column name used in the dataset.
+
+    Returns
+    -------
+    str
+        A user-friendly label for the metric if found in
+        ``map_metric_choices``; otherwise returns the original key.
+    """
     for group in map_metric_choices.values():
         if metric_key in group:
             return group[metric_key]
@@ -176,9 +189,60 @@ def create_sex_completion_rate_df(d):
 # ==========================================
 #   UI DEFINITION
 # ==========================================
+
 app_ui = ui.page_fluid(
     ui.tags.head(
-        ui.tags.title("World Education Dashboard")
+        ui.tags.title("World Education Dashboard"),
+        # Change the dashboard theme here
+        ui.tags.style("""
+            body {
+                background: linear-gradient(180deg, #f8fbff 0%, #eef4f9 100%);
+                color: #243447;
+            }
+        
+            .card {
+                border: none;
+                border-radius: 16px;
+                box-shadow: 0 6px 18px rgba(31, 59, 91, 0.10);
+                background-color: #ffffff;
+                overflow: hidden;
+            }
+        
+            .card-header {
+                background-color: #f7fbff !important;
+                border-bottom: 1px solid #e6eef5 !important;
+                font-weight: 600;
+                color: #1f3b5b;
+            }
+        
+            h2 {
+                font-weight: 700;
+                color: #1f3b5b;
+                margin-bottom: 1rem;
+            }
+        
+            .accordion-button {
+                font-weight: 600;
+                background-color: #f7fbff;
+            }
+        
+            .accordion-body {
+                background-color: #ffffff;
+            }
+        
+            .form-check-input:checked {
+                background-color: #4c78a8;
+                border-color: #4c78a8;
+            }
+        
+            .btn-outline-primary {
+                border-radius: 10px;
+            }
+        
+            .btn-outline-secondary {
+                border-radius: 10px;
+            }
+        """)
     ),
     ui.navset_tab(
         # --- Tab 1: Main Dashboard ---
@@ -266,7 +330,13 @@ app_ui = ui.page_fluid(
                                     "Compare regional patterns in gender disparities in literacy rates",
                                     class_="text-muted small"
                                 ),
-                                output_widget("literacy_scatterplot"),
+                                ui.div(
+                                    output_widget("literacy_scatterplot"),
+                                    ui.div(
+                                        ui.output_text("literacy_coverage_note"),
+                                        class_="text-muted small fst-italic mt-2"
+                                    ),
+                                ),
                                 full_screen=True,
                             ),
                             width=1/3,
@@ -343,11 +413,40 @@ app_ui = ui.page_fluid(
 # ==========================================
 #   SERVER LOGIC
 # ==========================================
-def server(input, output, session):
+def server(input, output, session):    
+    def toggle_region(region):
+        """Toggle a region selection in the checkbox group.
+
+        If the given region is currently selected, it is removed.
+        Otherwise, it is added to the current selection.
+    
+        Parameters
+        ----------
+        region : str
+            The name of the region to toggle.
+    
+        Returns
+        -------
+        None
+        """
+        current = list(input.input_region())
+    
+        if region in current:
+            current.remove(region)
+        else:
+            current.append(region)
+        
+        ui.update_checkbox_group(
+            "input_region",
+            selected=current,
+            session=session
+        )
+
     # ----------------------------------------
     # TAB 1 LOGIC (Main Dashboard)
     # ----------------------------------------
     # 1) Get filtered ibis table (lazy - no data loaded yet)
+    
     @reactive.Calc
     def filtered_table():
         """Apply region filters at the database level using ibis.
@@ -364,9 +463,10 @@ def server(input, output, session):
         
         selected_regions = input.input_region()
         if selected_regions:
-            # Apply filter at database level
             table = table.filter(table["Region"].isin(selected_regions))
-        
+        else:
+            table = table.filter(table["Region"] == "__NO_MATCH__")
+    
         return table
     
     # 2) Materialize filtered data only when needed
@@ -382,12 +482,38 @@ def server(input, output, session):
             The filtered world education dataframe
         """
         return filtered_table().execute()
+        
+    @render.text
+    def literacy_coverage_note():
+        d = filtered_df()
+    
+        if d.empty:
+            return "Please select at least one region to display data."
+    
+        required_cols = [
+            "Youth_15_24_Literacy_Rate_Male",
+            "Youth_15_24_Literacy_Rate_Female",
+        ]
+    
+        shown = d.dropna(subset=required_cols).shape[0]
+        total = len(d)
+    
+        return f"Showing {shown} of {total} countries with available literacy data"
+        
     @reactive.Calc
     def selected_metric():
         return input.input_map_metric()
     
     @reactive.Calc
     def filtered_metric_series():
+        """Return non-missing values of the selected metric for filtered data.
+
+        Returns
+        -------
+        pd.Series
+            A pandas Series containing non-null values of the currently
+            selected metric for the region-filtered dataset.
+        """
         d = filtered_df()
         metric = selected_metric()
         return d[metric].dropna()
@@ -519,6 +645,17 @@ def server(input, output, session):
         )
     
         return d
+        
+    @reactive.Calc
+    def no_region_selected():
+        """Check whether no regions are currently selected.
+
+        Returns
+        -------
+        bool
+            True if no region is selected, otherwise False.
+        """
+        return len(input.input_region()) == 0
 
     # 3) Create object to display
     @output
@@ -526,15 +663,16 @@ def server(input, output, session):
     def world_map():
         """Create interactive world map figure.
 
-        Parameters
-        ----------
-        None
-
         Returns
         -------
         plotly.express.chorpleth
             Interactive world map figure.
         """
+        if no_region_selected():
+            fig = px.choropleth(title="Please select at least one region to display data")
+            fig.update_layout(height=450)
+            return fig
+
         d = filtered_df()
         metric = input.input_map_metric()
         fig = px.choropleth(
@@ -553,8 +691,17 @@ def server(input, output, session):
         )
 
         fig.update_layout(
-            margin=dict(l=0, r=0, t=30, b=0),
-            height=450
+            margin=dict(l=0, r=0, t=30, b=90),
+            height=450,
+            coloraxis_colorbar=dict(
+                orientation="h",
+                x=0.5,
+                xanchor="center",
+                y=-0.22,
+                yanchor="top",
+                len=0.75,
+                thickness=14
+            )
         )
 
         return fig
@@ -573,14 +720,27 @@ def server(input, output, session):
         plotly.express.scatter
             Scatterplot of male vs female literacy rate by region.
         """
+        if no_region_selected():
+            fig = px.scatter(title="Please select at least one region to display data")
+            return fig
+            
         d = filtered_df()
+        plot_df = d.dropna(subset=[
+            "Youth_15_24_Literacy_Rate_Male",
+            "Youth_15_24_Literacy_Rate_Female",
+        ])
+        
+        if plot_df.empty:
+            fig = px.scatter(title="No literacy data available for the selected region(s)")
+            return fig
 
         fig = px.scatter(
-            d,
+            plot_df,
             x="Youth_15_24_Literacy_Rate_Male",
             y="Youth_15_24_Literacy_Rate_Female",
             color="Region",
             hover_name="Countries and areas",
+            custom_data=["Region"],
             color_discrete_map=region_color_map,
             category_orders={"Region": region_choices},
             labels={
@@ -590,8 +750,8 @@ def server(input, output, session):
             }
         )
 
-        xy_min = d[["Youth_15_24_Literacy_Rate_Male", "Youth_15_24_Literacy_Rate_Female"]].min().min() - 5
-        xy_max = d[["Youth_15_24_Literacy_Rate_Male", "Youth_15_24_Literacy_Rate_Female"]].max().max() + 5
+        xy_min = plot_df[["Youth_15_24_Literacy_Rate_Male", "Youth_15_24_Literacy_Rate_Female"]].min().min() - 5
+        xy_max = plot_df[["Youth_15_24_Literacy_Rate_Male", "Youth_15_24_Literacy_Rate_Female"]].max().max() + 5
 
         # Add 45-degree diagonal line (y = x)
         fig.add_shape(
@@ -618,6 +778,27 @@ def server(input, output, session):
 
         return fig
 
+    @reactive.effect
+    def _capture_scatter_click():
+        fig = literacy_scatterplot.widget
+        if fig is None:
+            return
+    
+        for trace in fig.data:
+            trace._click_callbacks.clear()
+    
+            def handle_click(trace, points, state):
+                if not points.point_inds:
+                    return
+                if trace.customdata is None:
+                    return
+            
+                idx = points.point_inds[0]
+                region = trace.customdata[idx][0]
+                toggle_region(region)
+    
+            trace.on_click(handle_click)
+        
     @output
     @render.data_frame
     def tbl():
@@ -633,6 +814,13 @@ def server(input, output, session):
             Tabular data to be displayed.
         """
         d = filtered_df()
+        if d.empty:
+            return render.DataGrid(
+                pd.DataFrame({"Message": ["Please select at least one region to display data"]}),
+                selection_mode="none",
+                height="300px"
+            )
+            
         selected_cols = input.input_table_features()
     
         if not selected_cols:
@@ -679,6 +867,10 @@ def server(input, output, session):
             Plotly express bar plot object.
         
         """
+        if no_region_selected():
+            fig = px.bar(title="Please select at least one region to display data")
+            return fig
+            
         d = completion_gap_by_region_df()
     
         fig = px.bar(
@@ -686,6 +878,7 @@ def server(input, output, session):
             x="Education_Level",
             y="Completion_Rate_Gap",
             color="Region",
+            custom_data=["Region"],
             color_discrete_map=region_color_map,
             barmode="group",
             category_orders={
@@ -702,6 +895,27 @@ def server(input, output, session):
         fig.update_yaxes(dtick=2)
     
         return fig
+        
+    @reactive.effect
+    def _capture_gap_bar_click():
+        fig = completion_rate_gap_by_region_bar.widget
+        if fig is None:
+            return
+    
+        for trace in fig.data:
+            trace._click_callbacks.clear()
+    
+            def handle_click(trace, points, state):
+                if not points.point_inds:
+                    return
+                if trace.customdata is None:
+                    return
+            
+                idx = points.point_inds[0]
+                region = trace.customdata[idx][0]
+                toggle_region(region)
+    
+            trace.on_click(handle_click)
     
     @output
     @render_plotly
@@ -717,6 +931,10 @@ def server(input, output, session):
         px.bar
             Plotly express bar plot object.
         """
+        if no_region_selected():
+            fig = px.bar(title="Please select at least one region to display data")
+            return fig
+            
         d = region_completion_rate_df()
     
         fig = px.bar(
@@ -724,6 +942,7 @@ def server(input, output, session):
             x="Education_Level",
             y="Completion_Rate",
             color="Region",
+            custom_data=["Region"],
             color_discrete_map=region_color_map,
             barmode="group",
             category_orders={
@@ -740,7 +959,28 @@ def server(input, output, session):
         fig.update_yaxes(dtick=20)
     
         return fig
-        
+
+    @reactive.effect
+    def _capture_completion_bar_click():
+        fig = education_level_by_region_bar.widget
+        if fig is None:
+            return
+    
+        for trace in fig.data:
+            trace._click_callbacks.clear()
+    
+            def handle_click(trace, points, state):
+                if not points.point_inds:
+                    return
+                if trace.customdata is None:
+                    return
+            
+                idx = points.point_inds[0]
+                region = trace.customdata[idx][0]
+                toggle_region(region)
+    
+            trace.on_click(handle_click)
+    
     # KPI 1
     @render.ui
     def metric_average_box():
@@ -824,6 +1064,7 @@ def server(input, output, session):
     @reactive.effect
     @reactive.event(input.select_all_regions)
     def _select_all_regions():
+    
         ui.update_checkbox_group(
             "input_region",
             selected=region_choices,
@@ -833,9 +1074,10 @@ def server(input, output, session):
     @reactive.effect
     @reactive.event(input.reset_regions)
     def _reset_regions():
+    
         ui.update_checkbox_group(
             "input_region",
-            selected=region_choices,
+            selected=[],
             session=session
         )
 
