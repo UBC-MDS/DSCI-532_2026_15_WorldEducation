@@ -70,6 +70,19 @@ map_metric_choices = {
     },
 }
 def metric_label(metric_key):
+    """Return a human-readable label for a metric key.
+
+    Parameters
+    ----------
+    metric_key : str
+        The internal metric column name used in the dataset.
+
+    Returns
+    -------
+    str
+        A user-friendly label for the metric if found in
+        ``map_metric_choices``; otherwise returns the original key.
+    """
     for group in map_metric_choices.values():
         if metric_key in group:
             return group[metric_key]
@@ -180,9 +193,11 @@ def create_sex_completion_rate_df(d):
 # ==========================================
 #   UI DEFINITION
 # ==========================================
+
 app_ui = ui.page_fluid(
     ui.tags.head(
         ui.tags.title("World Education Dashboard"),
+        # Change the dashboard theme here
         ui.tags.style("""
             body {
                 background: linear-gradient(180deg, #f8fbff 0%, #eef4f9 100%);
@@ -416,6 +431,20 @@ app_ui = ui.page_fluid(
 # ==========================================
 def server(input, output, session):    
     def toggle_region(region):
+        """Toggle a region selection in the checkbox group.
+
+        If the given region is currently selected, it is removed.
+        Otherwise, it is added to the current selection.
+    
+        Parameters
+        ----------
+        region : str
+            The name of the region to toggle.
+    
+        Returns
+        -------
+        None
+        """
         current = list(input.input_region())
     
         if region in current:
@@ -493,6 +522,14 @@ def server(input, output, session):
     
     @reactive.Calc
     def filtered_metric_series():
+        """Return non-missing values of the selected metric for filtered data.
+
+        Returns
+        -------
+        pd.Series
+            A pandas Series containing non-null values of the currently
+            selected metric for the region-filtered dataset.
+        """
         d = filtered_df()
         metric = selected_metric()
         return d[metric].dropna()
@@ -627,6 +664,13 @@ def server(input, output, session):
         
     @reactive.Calc
     def no_region_selected():
+        """Check whether no regions are currently selected.
+
+        Returns
+        -------
+        bool
+            True if no region is selected, otherwise False.
+        """
         return len(input.input_region()) == 0
 
     # 3) Create object to display
@@ -634,10 +678,6 @@ def server(input, output, session):
     @render_widget
     def world_map():
         """Create interactive world map figure.
-
-        Parameters
-        ----------
-        None
 
         Returns
         -------
