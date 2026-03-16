@@ -104,6 +104,10 @@ GREETING = greeting_path.read_text(encoding="utf-8")
 data_desc_path = Path(__file__).parent / "data_desc.md"
 DATA_DESC = data_desc_path.read_text(encoding="utf-8")
 
+# Read dashboard description
+dashboard_desc_path = Path(__file__).parent / "dashboard_description.md"
+DASHBOARD_DESCRIPTION = dashboard_desc_path.read_text(encoding="utf-8")
+
 # Load full dataset for QueryChat (it needs pandas DataFrame)
 df_for_querychat = education_table.execute()
 
@@ -185,6 +189,18 @@ app_ui = ui.page_fluid(
         ui.nav_panel(
             "Main Dashboard",
             ui.h2("World Education Dashboard"),
+            ui.div(
+                ui.accordion(
+                    ui.accordion_panel(
+                        "Click to learn more about this dashboard.",
+                        ui.card(
+                            ui.markdown(DASHBOARD_DESCRIPTION)
+                        ),
+                    ),
+                    open=False
+                ),
+                class_="mb-3"
+            ),
             ui.layout_sidebar(
                 ui.sidebar(
                     ui.card(
@@ -637,7 +653,7 @@ def server(input, output, session):
             return fig
 
         fig = px.scatter(
-            d,
+            plot_df,
             x="Youth_15_24_Literacy_Rate_Male",
             y="Youth_15_24_Literacy_Rate_Female",
             color="Region",
