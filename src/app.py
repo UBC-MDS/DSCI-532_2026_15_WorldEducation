@@ -193,7 +193,6 @@ def create_sex_completion_rate_df(d):
 # ==========================================
 #   UI DEFINITION
 # ==========================================
-
 app_ui = ui.page_fluid(
     ui.tags.head(
         ui.tags.title("World Education Dashboard"),
@@ -253,6 +252,15 @@ app_ui = ui.page_fluid(
         ui.nav_panel(
             "Main Dashboard",
             ui.h2("World Education Dashboard"),
+            ui.accordion(
+                ui.accordion_panel(
+                    "Click to learn more about this dashboard.",
+                    ui.card(
+                        ui.markdown(dashboard_description)
+                    ),
+                ),
+                open=False
+            ),
             ui.layout_sidebar(
                 ui.sidebar(
                     ui.card(
