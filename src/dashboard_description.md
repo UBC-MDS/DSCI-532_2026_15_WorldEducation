@@ -1,12 +1,12 @@
 ### About this dashboard
 
-This dashboard explores **global education indicators** across world regions using data from international education datasets. It allows users to compare patterns in **education access, completion, and literacy outcomes** across countries.
+This dashboard explores **global education indicators** across world regions using data from international education datasets in 2021. It allows users to compare patterns in **education access, completion, and literacy outcomes** across countries.
 
 #### How to use this dashboard
 
 **Region filter (left sidebar)**
 - Select one or more regions to update all charts, the map, and the data table.
-- You can also **click regions directly in the charts** to toggle them in the filter.
+- You can also **click regions directly in the charts** to remove them in the filter.
 
 **Overview tab**
 - Explore a **world map of education indicators** by selecting different metrics.

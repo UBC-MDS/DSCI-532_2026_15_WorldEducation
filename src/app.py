@@ -182,7 +182,56 @@ def create_sex_completion_rate_df(d):
 # ==========================================
 app_ui = ui.page_fluid(
     ui.tags.head(
-        ui.tags.title("World Education Dashboard")
+        ui.tags.title("World Education Dashboard"),
+        ui.tags.style("""
+            body {
+                background: linear-gradient(180deg, #f8fbff 0%, #eef4f9 100%);
+                color: #243447;
+            }
+        
+            .card {
+                border: none;
+                border-radius: 16px;
+                box-shadow: 0 6px 18px rgba(31, 59, 91, 0.10);
+                background-color: #ffffff;
+                overflow: hidden;
+            }
+        
+            .card-header {
+                background-color: #f7fbff !important;
+                border-bottom: 1px solid #e6eef5 !important;
+                font-weight: 600;
+                color: #1f3b5b;
+            }
+        
+            h2 {
+                font-weight: 700;
+                color: #1f3b5b;
+                margin-bottom: 1rem;
+            }
+        
+            .accordion-button {
+                font-weight: 600;
+                background-color: #f7fbff;
+            }
+        
+            .accordion-body {
+                background-color: #ffffff;
+            }
+        
+            .form-check-input:checked {
+                background-color: #4c78a8;
+                border-color: #4c78a8;
+            }
+        
+            .btn-outline-primary {
+                border-radius: 10px;
+            }
+        
+            .btn-outline-secondary {
+                border-radius: 10px;
+            }
+        """)
     ),
     ui.navset_tab(
         # --- Tab 1: Main Dashboard ---
@@ -618,8 +667,17 @@ def server(input, output, session):
         )
 
         fig.update_layout(
-            margin=dict(l=0, r=0, t=30, b=0),
-            height=450
+            margin=dict(l=0, r=0, t=30, b=90),
+            height=450,
+            coloraxis_colorbar=dict(
+                orientation="h",
+                x=0.5,
+                xanchor="center",
+                y=-0.22,
+                yanchor="top",
+                len=0.75,
+                thickness=14
+            )
         )
 
         return fig
@@ -668,8 +726,8 @@ def server(input, output, session):
             }
         )
 
-        xy_min = d[["Youth_15_24_Literacy_Rate_Male", "Youth_15_24_Literacy_Rate_Female"]].min().min() - 5
-        xy_max = d[["Youth_15_24_Literacy_Rate_Male", "Youth_15_24_Literacy_Rate_Female"]].max().max() + 5
+        xy_min = plot_df[["Youth_15_24_Literacy_Rate_Male", "Youth_15_24_Literacy_Rate_Female"]].min().min() - 5
+        xy_max = plot_df[["Youth_15_24_Literacy_Rate_Male", "Youth_15_24_Literacy_Rate_Female"]].max().max() + 5
 
         # Add 45-degree diagonal line (y = x)
         fig.add_shape(
