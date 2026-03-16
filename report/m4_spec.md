@@ -36,3 +36,86 @@
 | `metric_coverage_box` | Output | `@render.ui` | `filtered_df` | #3 |
 | `literacy_coverage_note` | Output | `@render.text` | `filtered_df` | #2 |
 | `tbl` | Output | `@render.data_frame` | `filtered_df`, `input_table_features` | #1, #3, #4 |
+
+### 2.3 Reactivity Diagram
+
+```mermaid
+flowchart TD
+    A[input_region] --> B{{filtered_table}}
+    B --> C{{filtered_df}}
+
+    D[input_map_metric] --> E{{selected_metric}}
+    E --> F{{filtered_metric_series}}
+    E --> G{{global_metric_series}}
+
+    C --> F
+    C --> H{{region_completion_rate_df}}
+    C --> I{{completion_gap_by_region_df}}
+    C --> K{{no_region_selected}}
+    C --> L([tbl])
+    C --> M([literacy_coverage_note])
+
+    K --> N([world_map])
+    C --> N
+    E --> N
+
+    K --> O([literacy_scatterplot])
+    C --> O
+
+    K --> P([education_level_by_region_bar])
+    H --> P
+
+    K --> Q([completion_rate_gap_by_region_bar])
+    I --> Q
+```
+
+### 2.4 Calculation Details
+
+**filtered_table**  
+Inputs: `education_table`, `input_region`  
+Creates a lazy Ibis query filtered to the selected regions.
+
+**filtered_df**  
+Executes the Ibis query and returns a pandas DataFrame used by the dashboard.
+
+**selected_metric**  
+Returns the currently selected map metric.
+
+**filtered_metric_series**  
+Extracts the selected metric from the filtered dataset and removes missing values.
+
+**global_metric_series**  
+Queries the selected metric from the full dataset to compare against global averages.
+
+**region_completion_rate_df**  
+Reshapes completion rate columns and calculates mean completion rate by region and education level.
+
+**completion_gap_by_region_df**  
+Reshapes completion gender gap columns and calculates mean completion gap by region.
+
+**literacy_coverage_note**  
+Displays how many countries have available literacy data for the current filter.
+
+### Advanced Feature Note
+
+This dashboard implements **Option D** by treating chart outputs as interactive inputs.  
+Clickable dashboard outputs will be used as inputs for linked filtering.
+
+### To be implemented
+- Clicking a region in either bar chart updates the dashboard filter (i.e. remove regions by clicking those regions on either bar chart)
+- Clicking a point in the literacy scatterplot updates the dashboard filter (i.e. remove regions by clicking those regions on scatterplot)
+- The region checkbox input stays synchronized with chart interaction
+- The map, KPI cards, charts, and data table react to the selected region(s)
+- Reset clears all selected regions
+- Empty-state messages appear when no region is selected
+- A literacy coverage note shows how many countries have valid data for the scatterplot
+
+### Testing
+
+- 4 tests will be added
+  - 1 unit test
+    - This test will confirm that the dataframe operations need to achieve the correct data format for the bar chart that shows education level completion by gender is correctly done. This test is needed otherwise the displayed data may not be accurate.
+  - 3 full app tests
+    - Test that the displayed dataframe has the correct size. This test is needed to ensure the loaded data is correct and therefore the data for all plots has the correct starting starting point. Without this test we can't be sure any of the displayed plots are correct.
+    - Test that the regional filters are operating correctly. Without this a user may believe they are observing region specific data but actually are not.
+    - Test the reset filter button. Without this test we can't be sure users are able to reset the dashboard. They may believe they are looking at unfiltered data but are not.
