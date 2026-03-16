@@ -11,10 +11,9 @@ from querychat import QueryChat
 import ibis
 from ibis import _
 
-env_path = Path(__file__).parent / ".env"
-load_dotenv(env_path)
+load_dotenv()
 
-# anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
+anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
 
 # ==========================================
 #   SETUP & DATA LOADING
