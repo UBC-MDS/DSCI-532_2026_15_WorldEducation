@@ -90,9 +90,6 @@ def metric_label(metric_key):
 
 # Initialize the correct Chatlas Client inside the server so it's safe for multi-users
 # Note: QueryChat requires a valid client, so we'll skip QueryChat initialization if no API key is available
-llm_client = None
-ACTIVE_MODEL = "NONE"
-
 if os.environ.get("USE_LOCAL_LLM", "False").lower() == "true":
     llm_client = clt.ChatOllama(model="qwen3.5")
     ACTIVE_MODEL = "Local: Ollama (Qwen 3.5)"
@@ -105,6 +102,10 @@ elif os.environ.get("ANTHROPIC_API_KEY"):
     llm_client = clt.ChatAnthropic(model="claude-haiku-4-5-20251001") 
     ACTIVE_MODEL = "Cloud: Anthropic (Claude Haiku 4.5)"
 
+else:
+    llm_client = None
+    ACTIVE_MODEL = "NONE (No API keys or Local LLM found)"
+
 # Print in terminal to see LLM successfully loaded
 print(f"\n---> LLM Status: {ACTIVE_MODEL} <---\n")
 
@@ -116,6 +117,9 @@ GREETING = greeting_path.read_text(encoding="utf-8")
 # Read data description
 data_desc_path = Path(__file__).parent / "data_desc.md"
 DATA_DESC = data_desc_path.read_text(encoding="utf-8")
+
+# Add drop-down dashboard description
+dashboard_description = Path("src/dashboard_description.md").read_text(encoding="utf-8")
 
 # Load full dataset for QueryChat (it needs pandas DataFrame)
 df_for_querychat = education_table.execute()
