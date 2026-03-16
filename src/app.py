@@ -688,13 +688,22 @@ def server(input, output, session):
 
         d = filtered_df()
         metric = input.input_map_metric()
+        clean_label = metric_label(metric)
+        
+        # DYNAMIC COLOR SCALE: Reverse the colors for negative metrics (OOSR)
+        if metric.startswith("OOSR_"):
+            map_colors = "viridis_r"  # Reversed: High is dark/blue, Low is bright/yellow
+        else:
+            map_colors = "viridis"
+
         fig = px.choropleth(
             d, 
             locations="iso3", 
             hover_name="Countries and areas",
             color=metric,
-            color_continuous_scale="viridis",
-            projection="natural earth"
+            color_continuous_scale=map_colors,
+            projection="natural earth",
+            labels={metric: clean_label}
         )
 
         fig.update_geos(
@@ -1218,7 +1227,7 @@ def server(input, output, session):
         )
 
         fig.update_traces(marker_size=8) # make marker point size larger
-        
+
         return fig
 
     @output
