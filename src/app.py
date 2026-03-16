@@ -206,19 +206,11 @@ app_ui = ui.page_fluid(
                                 "Reset",
                                 class_="btn-outline-secondary btn-sm"
                             ),
-                            ui.div(
-                                ui.input_action_button(
-                                    "clear_region_click",
-                                    "Clear chart selection",
-                                    class_="btn-outline-danger btn-sm mt-2"
-                                )
-                            ),
                         ),
                         ui.p(
                             "The selected regions apply to the map and KPI cards in the Overview tab, charts in the Completion & Literacy tab, and the table in the Data Table tab.",
                             class_="text-muted small mt-2"
                         ),
-                        ui.output_text("active_region"),
                     ),
                     width=300,
                 ),
@@ -274,7 +266,13 @@ app_ui = ui.page_fluid(
                                     "Compare regional patterns in gender disparities in literacy rates",
                                     class_="text-muted small"
                                 ),
-                                output_widget("literacy_scatterplot"),
+                                ui.div(
+                                    output_widget("literacy_scatterplot"),
+                                    ui.div(
+                                        ui.output_text("literacy_coverage_note"),
+                                        class_="text-muted small fst-italic mt-2"
+                                    ),
+                                ),
                                 full_screen=True,
                             ),
                             width=1/3,
@@ -351,9 +349,7 @@ app_ui = ui.page_fluid(
 # ==========================================
 #   SERVER LOGIC
 # ==========================================
-def server(input, output, session):
-    selected_region_click = reactive.Value([])
-    
+def server(input, output, session):    
     def toggle_region(region):
         current = list(input.input_region())
     
@@ -361,9 +357,7 @@ def server(input, output, session):
             current.remove(region)
         else:
             current.append(region)
-    
-        selected_region_click.set(current)
-    
+        
         ui.update_checkbox_group(
             "input_region",
             selected=current,
@@ -391,9 +385,10 @@ def server(input, output, session):
         
         selected_regions = input.input_region()
         if selected_regions:
-            # Apply filter at database level
             table = table.filter(table["Region"].isin(selected_regions))
-        
+        else:
+            table = table.filter(table["Region"] == "__NO_MATCH__")
+    
         return table
     
     # 2) Materialize filtered data only when needed
@@ -411,11 +406,21 @@ def server(input, output, session):
         return filtered_table().execute()
         
     @render.text
-    def active_region():
-        regions = selected_region_click()
-        if not regions:
-            return "Selected from chart: None"
-        return "Selected from chart: " + ", ".join(regions)
+    def literacy_coverage_note():
+        d = filtered_df()
+    
+        if d.empty:
+            return "Please select at least one region to display data."
+    
+        required_cols = [
+            "Youth_15_24_Literacy_Rate_Male",
+            "Youth_15_24_Literacy_Rate_Female",
+        ]
+    
+        shown = d.dropna(subset=required_cols).shape[0]
+        total = len(d)
+    
+        return f"Showing {shown} of {total} countries with available literacy data"
         
     @reactive.Calc
     def selected_metric():
@@ -554,6 +559,10 @@ def server(input, output, session):
         )
     
         return d
+        
+    @reactive.Calc
+    def no_region_selected():
+        return len(input.input_region()) == 0
 
     # 3) Create object to display
     @output
@@ -570,6 +579,11 @@ def server(input, output, session):
         plotly.express.chorpleth
             Interactive world map figure.
         """
+        if no_region_selected():
+            fig = px.choropleth(title="Please select at least one region to display data")
+            fig.update_layout(height=450)
+            return fig
+
         d = filtered_df()
         metric = input.input_map_metric()
         fig = px.choropleth(
@@ -608,7 +622,19 @@ def server(input, output, session):
         plotly.express.scatter
             Scatterplot of male vs female literacy rate by region.
         """
+        if no_region_selected():
+            fig = px.scatter(title="Please select at least one region to display data")
+            return fig
+            
         d = filtered_df()
+        plot_df = d.dropna(subset=[
+            "Youth_15_24_Literacy_Rate_Male",
+            "Youth_15_24_Literacy_Rate_Female",
+        ])
+        
+        if plot_df.empty:
+            fig = px.scatter(title="No literacy data available for the selected region(s)")
+            return fig
 
         fig = px.scatter(
             d,
@@ -664,10 +690,14 @@ def server(input, output, session):
             trace._click_callbacks.clear()
     
             def handle_click(trace, points, state):
-                if points.point_inds:
-                    idx = points.point_inds[0]
-                    region = trace.customdata[idx][0]
-                    toggle_region(region)
+                if not points.point_inds:
+                    return
+                if trace.customdata is None:
+                    return
+            
+                idx = points.point_inds[0]
+                region = trace.customdata[idx][0]
+                toggle_region(region)
     
             trace.on_click(handle_click)
         
@@ -686,6 +716,13 @@ def server(input, output, session):
             Tabular data to be displayed.
         """
         d = filtered_df()
+        if d.empty:
+            return render.DataGrid(
+                pd.DataFrame({"Message": ["Please select at least one region to display data"]}),
+                selection_mode="none",
+                height="300px"
+            )
+            
         selected_cols = input.input_table_features()
     
         if not selected_cols:
@@ -732,6 +769,10 @@ def server(input, output, session):
             Plotly express bar plot object.
         
         """
+        if no_region_selected():
+            fig = px.bar(title="Please select at least one region to display data")
+            return fig
+            
         d = completion_gap_by_region_df()
     
         fig = px.bar(
@@ -767,10 +808,14 @@ def server(input, output, session):
             trace._click_callbacks.clear()
     
             def handle_click(trace, points, state):
-                if points.point_inds:
-                    idx = points.point_inds[0]
-                    region = trace.customdata[idx][0]
-                    toggle_region(region)
+                if not points.point_inds:
+                    return
+                if trace.customdata is None:
+                    return
+            
+                idx = points.point_inds[0]
+                region = trace.customdata[idx][0]
+                toggle_region(region)
     
             trace.on_click(handle_click)
     
@@ -788,6 +833,10 @@ def server(input, output, session):
         px.bar
             Plotly express bar plot object.
         """
+        if no_region_selected():
+            fig = px.bar(title="Please select at least one region to display data")
+            return fig
+            
         d = region_completion_rate_df()
     
         fig = px.bar(
@@ -823,10 +872,14 @@ def server(input, output, session):
             trace._click_callbacks.clear()
     
             def handle_click(trace, points, state):
-                if points.point_inds:
-                    idx = points.point_inds[0]
-                    region = trace.customdata[idx][0]
-                    toggle_region(region)
+                if not points.point_inds:
+                    return
+                if trace.customdata is None:
+                    return
+            
+                idx = points.point_inds[0]
+                region = trace.customdata[idx][0]
+                toggle_region(region)
     
             trace.on_click(handle_click)
     
@@ -913,17 +966,6 @@ def server(input, output, session):
     @reactive.effect
     @reactive.event(input.select_all_regions)
     def _select_all_regions():
-        selected_region_click.set(region_choices)
-
-        ui.update_checkbox_group(
-            "input_region",
-            selected=region_choices,
-            session=session
-        )
-    @reactive.effect
-    @reactive.event(input.clear_region_click)
-    def _clear_region_click():
-        selected_region_click.set(region_choices)
     
         ui.update_checkbox_group(
             "input_region",
@@ -934,11 +976,10 @@ def server(input, output, session):
     @reactive.effect
     @reactive.event(input.reset_regions)
     def _reset_regions():
-        selected_region_click.set(region_choices)
-
+    
         ui.update_checkbox_group(
             "input_region",
-            selected=region_choices,
+            selected=[],
             session=session
         )
 
