@@ -11,9 +11,10 @@ from querychat import QueryChat
 import ibis
 from ibis import _
 
-load_dotenv()
+env_path = Path(__file__).parent / ".env"
+load_dotenv(env_path)
 
-anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
+# anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
 
 # ==========================================
 #   SETUP & DATA LOADING
@@ -1189,6 +1190,35 @@ def server(input, output, session):
                 "Youth_15_24_Literacy_Rate_Female": "Female Literacy Rate (%)"
             }
         )
+
+        xy_min = d[["Youth_15_24_Literacy_Rate_Male", "Youth_15_24_Literacy_Rate_Female"]].min().min() - 5
+        xy_max = d[["Youth_15_24_Literacy_Rate_Male", "Youth_15_24_Literacy_Rate_Female"]].max().max() + 5
+
+        # Add 45-degree diagonal line (y = x)
+        fig.add_shape(
+            type="line",
+            x0=-10, y0=-10,
+            x1=110, y1=110,
+            line=dict(color="black", dash="dash")
+        )
+
+        # Tidy axis
+        axis_range = xy_max-xy_min
+        if axis_range < 15:
+            tick_size = 2
+        elif axis_range < 40:
+            tick_size = 5
+        else:
+            tick_size = 10
+        fig.update_xaxes(dtick=tick_size)
+        fig.update_yaxes(dtick=tick_size)
+        fig.update_layout(
+            xaxis=dict(range=[xy_min, xy_max]),  # x scale follows y
+            yaxis=dict(range=[xy_min, xy_max])
+        )
+
+        fig.update_traces(marker_size=8) # make marker point size larger
+        
         return fig
 
     @output
