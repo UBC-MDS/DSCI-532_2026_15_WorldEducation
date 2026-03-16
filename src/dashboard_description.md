@@ -35,8 +35,8 @@ This dashboard explores **global education indicators** across world regions usi
 
 ## Limitations for this data set
 
-- This data is only a snapshot of different metrics for each country without multiple years of records, so there is no year level filter/trend.
-- Some indicators are **not available for all countries**, so certain charts may display fewer observations depending on the selected metric or region, and the filter and plots are delivered by regional level of detail but not country level of detail.
+- This data is only a snapshot of different metrics for countries with only single year record of 2021, so there is no year level filter/trend.
+- Some indicators are **not available for all countries**, so certain charts may display fewer observations depending on the selected metric or region, and the filter and plots are delivered primarily by regional level of detail but not country level of detail.
 
 **Original data can be accessed via this [link to Kaggle](https://www.kaggle.com/datasets/nelgiriyewithana/world-educational-data/data).**
 
