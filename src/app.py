@@ -25,7 +25,23 @@ education_table = con.read_parquet("data/processed/processed_global_education.pa
 
 # Load a small sample for metadata (column names, choices, etc.)
 df_sample = education_table.limit(1000).execute()
-table_feature_choices = df_sample.columns.tolist()
+
+# Grab all columns except the junk index column
+raw_cols = [c for c in df_sample.columns.tolist() if c != "Unnamed: 0"]
+
+# Automatically group the columns using list comprehensions
+table_feature_choices = {
+    "Identifiers": {
+        "Countries and areas": "Countries and areas",
+        "Region": "Region",
+        "iso3": "iso3"
+    },
+    "Access (Out of School & Enrollment)": {c: c for c in raw_cols if "OOSR" in c or "Enrollment" in c},
+    "Completion": {c: c for c in raw_cols if "Completion" in c},
+    "Learning (Proficiency)": {c: c for c in raw_cols if "Proficiency" in c},
+    "Context & Literacy": {c: c for c in raw_cols if "Literacy" in c or c in ["Birth_Rate", "Unemployment_Rate"]}
+}
+
 region_choices = ["North America", "South America", "Europe", "Asia", "Africa", "Oceania"]
 region_color_map = {
     "North America": "#66c2a5",
