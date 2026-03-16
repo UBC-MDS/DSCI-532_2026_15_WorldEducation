@@ -743,7 +743,7 @@ def server(input, output, session):
         ])
         
         if plot_df.empty:
-            fig = px.scatter(title="No literacy data available for the selected region(s)")
+            fig = px.scatter(title="No literacy data available for the selected region(s)").update_layout(title_font_size=12)
             return fig
 
         fig = px.scatter(
@@ -787,6 +787,7 @@ def server(input, output, session):
             xaxis=dict(range=[xy_min, xy_max]),  # x scale follows y
             yaxis=dict(range=[xy_min, xy_max])
         )
+        fig.update_traces(marker_size=8) # make marker point size larger
 
         return fig
 
@@ -880,7 +881,7 @@ def server(input, output, session):
         
         """
         if no_region_selected():
-            fig = px.bar(title="Please select at least one region to display data")
+            fig = px.bar(title="Please select at least one region to display data").update_layout(title_font_size=12)
             return fig
             
         d = completion_gap_by_region_df()
@@ -904,6 +905,11 @@ def server(input, output, session):
         )
     
         fig.add_hline(y=0, line_dash="dash", line_color="black")
+
+        # ADD THESE TWO LINES: Vertical separators between categories
+        fig.add_vline(x=0.5, line_width=1, line_dash="dash", line_color="gray", opacity=0.5)
+        fig.add_vline(x=1.5, line_width=1, line_dash="dash", line_color="gray", opacity=0.5)
+
         fig.update_yaxes(dtick=2)
     
         return fig
@@ -967,6 +973,10 @@ def server(input, output, session):
             },
             range_y=[0, 100]
         )
+
+        # ADD THESE TWO LINES: Vertical separators between categories
+        fig.add_vline(x=0.5, line_width=1, line_dash="dash", line_color="gray", opacity=0.5)
+        fig.add_vline(x=1.5, line_width=1, line_dash="dash", line_color="gray", opacity=0.5)
     
         fig.update_yaxes(dtick=20)
     
