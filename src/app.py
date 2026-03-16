@@ -24,7 +24,23 @@ education_table = con.read_parquet("data/processed/processed_global_education.pa
 
 # Load a small sample for metadata (column names, choices, etc.)
 df_sample = education_table.limit(1000).execute()
-table_feature_choices = df_sample.columns.tolist()
+
+# Grab all columns except the junk index column
+raw_cols = [c for c in df_sample.columns.tolist() if c != "Unnamed: 0"]
+
+# Automatically group the columns using list comprehensions
+table_feature_choices = {
+    "Identifiers": {
+        "Countries and areas": "Countries and areas",
+        "Region": "Region",
+        "iso3": "iso3"
+    },
+    "Access (Out of School & Enrollment)": {c: c for c in raw_cols if "OOSR" in c or "Enrollment" in c},
+    "Completion": {c: c for c in raw_cols if "Completion" in c},
+    "Learning (Proficiency)": {c: c for c in raw_cols if "Proficiency" in c},
+    "Context & Literacy": {c: c for c in raw_cols if "Literacy" in c or c in ["Birth_Rate", "Unemployment_Rate"]}
+}
+
 region_choices = ["North America", "South America", "Europe", "Asia", "Africa", "Oceania"]
 region_color_map = {
     "North America": "#66c2a5",
@@ -90,9 +106,6 @@ def metric_label(metric_key):
 
 # Initialize the correct Chatlas Client inside the server so it's safe for multi-users
 # Note: QueryChat requires a valid client, so we'll skip QueryChat initialization if no API key is available
-llm_client = None
-ACTIVE_MODEL = "NONE"
-
 if os.environ.get("USE_LOCAL_LLM", "False").lower() == "true":
     llm_client = clt.ChatOllama(model="qwen3.5")
     ACTIVE_MODEL = "Local: Ollama (Qwen 3.5)"
@@ -105,6 +118,10 @@ elif os.environ.get("ANTHROPIC_API_KEY"):
     llm_client = clt.ChatAnthropic(model="claude-haiku-4-5-20251001") 
     ACTIVE_MODEL = "Cloud: Anthropic (Claude Haiku 4.5)"
 
+else:
+    llm_client = None
+    ACTIVE_MODEL = "NONE (No API keys or Local LLM found)"
+
 # Print in terminal to see LLM successfully loaded
 print(f"\n---> LLM Status: {ACTIVE_MODEL} <---\n")
 
@@ -116,6 +133,9 @@ GREETING = greeting_path.read_text(encoding="utf-8")
 # Read data description
 data_desc_path = Path(__file__).parent / "data_desc.md"
 DATA_DESC = data_desc_path.read_text(encoding="utf-8")
+
+# Add drop-down dashboard description
+dashboard_description = Path("src/dashboard_description.md").read_text(encoding="utf-8")
 
 # Load full dataset for QueryChat (it needs pandas DataFrame)
 df_for_querychat = education_table.execute()
@@ -189,7 +209,6 @@ def create_sex_completion_rate_df(d):
 # ==========================================
 #   UI DEFINITION
 # ==========================================
-
 app_ui = ui.page_fluid(
     ui.tags.head(
         ui.tags.title("World Education Dashboard"),
@@ -249,6 +268,15 @@ app_ui = ui.page_fluid(
         ui.nav_panel(
             "Main Dashboard",
             ui.h2("World Education Dashboard"),
+            ui.accordion(
+                ui.accordion_panel(
+                    "Click to learn more about this dashboard.",
+                    ui.card(
+                        ui.markdown(dashboard_description)
+                    ),
+                ),
+                open=False
+            ),
             ui.layout_sidebar(
                 ui.sidebar(
                     ui.card(
@@ -675,13 +703,22 @@ def server(input, output, session):
 
         d = filtered_df()
         metric = input.input_map_metric()
+        clean_label = metric_label(metric)
+        
+        # DYNAMIC COLOR SCALE: Reverse the colors for negative metrics (OOSR)
+        if metric.startswith("OOSR_"):
+            map_colors = "viridis_r"  # Reversed: High is dark/blue, Low is bright/yellow
+        else:
+            map_colors = "viridis"
+
         fig = px.choropleth(
             d, 
             locations="iso3", 
             hover_name="Countries and areas",
             color=metric,
-            color_continuous_scale="viridis",
-            projection="natural earth"
+            color_continuous_scale=map_colors,
+            projection="natural earth",
+            labels={metric: clean_label}
         )
 
         fig.update_geos(
@@ -731,7 +768,7 @@ def server(input, output, session):
         ])
         
         if plot_df.empty:
-            fig = px.scatter(title="No literacy data available for the selected region(s)")
+            fig = px.scatter(title="No literacy data available for the selected region(s)").update_layout(title_font_size=12)
             return fig
 
         fig = px.scatter(
@@ -775,6 +812,7 @@ def server(input, output, session):
             xaxis=dict(range=[xy_min, xy_max]),  # x scale follows y
             yaxis=dict(range=[xy_min, xy_max])
         )
+        fig.update_traces(marker_size=8) # make marker point size larger
 
         return fig
 
@@ -868,7 +906,7 @@ def server(input, output, session):
         
         """
         if no_region_selected():
-            fig = px.bar(title="Please select at least one region to display data")
+            fig = px.bar(title="Please select at least one region to display data").update_layout(title_font_size=12)
             return fig
             
         d = completion_gap_by_region_df()
@@ -892,6 +930,11 @@ def server(input, output, session):
         )
     
         fig.add_hline(y=0, line_dash="dash", line_color="black")
+
+        # ADD THESE TWO LINES: Vertical separators between categories
+        fig.add_vline(x=0.5, line_width=1, line_dash="dash", line_color="gray", opacity=0.5)
+        fig.add_vline(x=1.5, line_width=1, line_dash="dash", line_color="gray", opacity=0.5)
+
         fig.update_yaxes(dtick=2)
     
         return fig
@@ -955,6 +998,10 @@ def server(input, output, session):
             },
             range_y=[0, 100]
         )
+
+        # ADD THESE TWO LINES: Vertical separators between categories
+        fig.add_vline(x=0.5, line_width=1, line_dash="dash", line_color="gray", opacity=0.5)
+        fig.add_vline(x=1.5, line_width=1, line_dash="dash", line_color="gray", opacity=0.5)
     
         fig.update_yaxes(dtick=20)
     
@@ -1167,6 +1214,35 @@ def server(input, output, session):
                 "Youth_15_24_Literacy_Rate_Female": "Female Literacy Rate (%)"
             }
         )
+
+        xy_min = d[["Youth_15_24_Literacy_Rate_Male", "Youth_15_24_Literacy_Rate_Female"]].min().min() - 5
+        xy_max = d[["Youth_15_24_Literacy_Rate_Male", "Youth_15_24_Literacy_Rate_Female"]].max().max() + 5
+
+        # Add 45-degree diagonal line (y = x)
+        fig.add_shape(
+            type="line",
+            x0=-10, y0=-10,
+            x1=110, y1=110,
+            line=dict(color="black", dash="dash")
+        )
+
+        # Tidy axis
+        axis_range = xy_max-xy_min
+        if axis_range < 15:
+            tick_size = 2
+        elif axis_range < 40:
+            tick_size = 5
+        else:
+            tick_size = 10
+        fig.update_xaxes(dtick=tick_size)
+        fig.update_yaxes(dtick=tick_size)
+        fig.update_layout(
+            xaxis=dict(range=[xy_min, xy_max]),  # x scale follows y
+            yaxis=dict(range=[xy_min, xy_max])
+        )
+
+        fig.update_traces(marker_size=8) # make marker point size larger
+
         return fig
 
     @output
