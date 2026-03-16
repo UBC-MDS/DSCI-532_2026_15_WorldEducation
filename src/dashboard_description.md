@@ -11,7 +11,6 @@ This dashboard explores **global education indicators** across world regions usi
 
 **Region filter (left sidebar)**
 - Select one or more regions to update all charts, the map, and the data table.
-- You can also **click regions directly in the charts** to remove them in the filter.
 
 **Overview tab**
 - Explore a **world map of education indicators** by selecting different metrics.
