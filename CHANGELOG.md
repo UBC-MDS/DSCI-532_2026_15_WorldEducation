@@ -26,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Known Issues
 
+- No known issues at the time of this release.
+
 ### Release Highlight: Interactive region selection (Component Click Event Interaction)
 
 This dashboard focuses on regional comparison, so Option D was chosen to make exploration more interactive. Instead of relying solely on the sidebar filters on the left, users can now click regions directly in the bar charts or scatterplot. Once they click them, these regions are excluded from all the plots and table.
