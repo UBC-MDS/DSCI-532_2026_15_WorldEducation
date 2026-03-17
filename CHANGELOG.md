@@ -10,18 +10,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Unit test and whole app test with `playwright` (`#72`)
+- Interactive click has been implemented as the advanced feature. Users can click regions to deselect regions (`#77`)
+- Included the year of the data in the dashboard description. (`#77`)
 
 ### Changed
+- Dashboard theme (`#77`)
 
 ### Fixed
+- "Select All" and "Reset" filters now have different functions. Reset is now set to no regions selected. (`#77`)
+- **Feature prioritization issue link:** (`#63`).
 
 ### Known Issues
 
+### Release Highlight: Interactive region selection (Component Click Event Interaction)
+
+This dashboard focuses on regional comparison, so Option D was chosen to make exploration more interactive. Instead of relying solely on the sidebar filters on the left, users can now click regions directly in the bar charts or scatterplot. Once they click them, these regions are excluded from all the plots and table.
+- **Option chosen:** D (Component Click Event Interaction)
+- **PR:** (`#77`).
+- **Why this option over the others:** We have chosen this option since the other options were too complex to be implemented and were not as useful as option D where users could click on the plots to filter out regions. Therefore, we have decided to implement option D since it was the most useful for users.
+- **Feature prioritization issue link:** (`#63`).
+
+### Collaboration
+
+<!-- Summary of workflow or collaboration improvements made since M3. -->
+
+- **CONTRIBUTING.md:** <!-- Link to the PR that updated it with your M3 retrospective and M4 norms. -->
+- **M3 retrospective:** <!-- What changed in your workflow after M3 collaboration feedback. -->
+- **M4:** <!-- What you tried or improved this milestone. -->
+
 ### Reflections
 
-Testing
+- Testing
 
 Four tests were added. One unit test to  confirm that the dataframe operations need to achieve the correct data format for the bar chart that shows education level completion by gender is correctly done. This test is needed otherwise the displayed data may not be accurate. And three full app tests. 1) Test that the displayed dataframe has the correct size. This test is needed to ensure the loaded data is correct and therefore the data for all plots has the correct starting starting point. Without this test we can't be sure any of the displayed plots are correct. 2) Test that the regional filters are operating correctly. Without this a user may believe they are observing region specific data but actually are not. 3) Test the reset filter button. Without this test we can't be sure users are able to reset the dashboard. They may believe they are looking at unfiltered data but are not.
+
+- What the dashboard does well: The region-based design keeps the analysis focused and easy to interpret. The coordinated views including the choropleth map, KPI cards, bar charts, scatterplot, and data table work together to provide both high-level summaries and detailed exploration. The addition of interactive filtering (clicking on charts to update selected regions) makes the workflow more intuitive and supports exploratory analysis without relying solely on sidebar controls. The use of Ibis for lazy loading also improves performance when working with the full dataset.
+
+- Current Limitations: While the dashboard is interactive, some charts still overlap in the insights they provide. Also, the comparison can only be done on regional level, instead of country level. 
+
+- Tradeoffs: Priority was given to implementing the advanced interactive filtering (click-based selection across charts) and ensuring consistent reactivity across all components. This meant less time was available for refining visual differentiation between charts and improving the integration of the AI Assistant.
+
+- Most useful:
+The Shiny reactivity model and lecture materials were particularly helpful for structuring the dashboard logic, especially when implementing linked interactions across multiple components. The AI Assistant resources were also valuable in enabling the integration of the QueryChat feature, even though further refinement is still needed to fully align it with the dashboard’s analytical flow.
+
 
 ## [0.3.0](https://github.com/UBC-MDS/DSCI-532_2026_15_WorldEducation/releases/tag/v0.3.0) - 2026-03-08
 
