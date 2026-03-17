@@ -18,6 +18,9 @@ dependencies:
   - anywidget
   - python-dotenv
   - pip
+  - pytest
+  - pytest-playwright
+  - ibis-duckdb
   - pip:
     - chatlas
     - querychat
