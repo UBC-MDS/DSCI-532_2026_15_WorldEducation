@@ -34,9 +34,9 @@ This dashboard focuses on regional comparison, so Option D was chosen to make ex
 
 <!-- Summary of workflow or collaboration improvements made since M3. -->
 
-- **CONTRIBUTING.md:** <!-- Link to the PR that updated it with your M3 retrospective and M4 norms. -->
-- **M3 retrospective:** <!-- What changed in your workflow after M3 collaboration feedback. -->
-- **M4:** <!-- What you tried or improved this milestone. -->
+- **CONTRIBUTING.md:** (`#82`).
+- **M3 retrospective:** After M3 feedback, we recognized that although the team was effective at dividing work and completing features on time, our workflow still had some weaknesses. In particular, PRs were often too large, review quality varied, documentation was not always updated alongside implementation, and responsibilities around releases and submissions were not always clearly communicated. We also noticed that coding and writing contributions were somewhat uneven across team members.
+- **M4:** This milestone, we focused on improving collaboration by aiming for smaller and more manageable PRs, requiring at least one meaningful review before merging, and making sure reviewers were ideally not the feature author. We also committed to updating specifications before or alongside coding, writing clearer PR descriptions, and checking in more frequently to keep responsibilities and progress aligned.
 
 ### Reflections
 
