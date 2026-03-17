@@ -101,14 +101,18 @@ Displays how many countries have available literacy data for the current filter.
 This dashboard implements **Option D** by treating chart outputs as interactive inputs.  
 Clickable dashboard outputs will be used as inputs for linked filtering.
 
-### To be implemented
-- Clicking a region in either bar chart updates the dashboard filter (i.e. remove regions by clicking those regions on either bar chart)
-- Clicking a point in the literacy scatterplot updates the dashboard filter (i.e. remove regions by clicking those regions on scatterplot)
-- The region checkbox input stays synchronized with chart interaction
-- The map, KPI cards, charts, and data table react to the selected region(s)
-- Reset clears all selected regions
+### M4 Architecture Decision: DuckDB Lazy Loading
+
+In M4, the data loading pipeline was migrated from eager pandas CSV loading to lazy evaluation using Ibis + DuckDB backed by a Parquet file. This decision was made before implementation to improve performance and memory efficiency. The processed CSV was converted to Parquet format (`convert_to_parquet.py`), and all filtering now happens at the database level via Ibis expressions before data enters a DataFrame.
+
+### Implemented (M4)
+- Clicking a region in the literacy scatterplot toggles the region filter and updates the entire dashboard
+- The region checkbox input stays synchronized with chart interactions
+- The map, KPI cards, charts, and data table all react to the selected region(s)
+- Reset clears all selected regions (deselects everything)
 - Empty-state messages appear when no region is selected
 - A literacy coverage note shows how many countries have valid data for the scatterplot
+- Data pipeline switched from pandas CSV to Ibis + DuckDB with Parquet for lazy loading
 
 ### Testing
 
