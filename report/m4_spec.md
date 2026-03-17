@@ -101,15 +101,6 @@ Displays how many countries have available literacy data for the current filter.
 This dashboard implements **Option D** by treating chart outputs as interactive inputs.  
 Clickable dashboard outputs will be used as inputs for linked filtering.
 
-### To be implemented
-- Clicking a region in either bar chart updates the dashboard filter (i.e. remove regions by clicking those regions on either bar chart)
-- Clicking a point in the literacy scatterplot updates the dashboard filter (i.e. remove regions by clicking those regions on scatterplot)
-- The region checkbox input stays synchronized with chart interaction
-- The map, KPI cards, charts, and data table react to the selected region(s)
-- Reset clears all selected regions
-- Empty-state messages appear when no region is selected
-- A literacy coverage note shows how many countries have valid data for the scatterplot
-
 ### Testing
 
 - 4 tests will be added
