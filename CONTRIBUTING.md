@@ -44,6 +44,30 @@ Throughout this project, our team was able to apply various tools used in softwa
 
 This project is released with a [Contributor Code of Conduct](CODE_OF_CONDUCT.md) and by contributing to or otherwise participating in this project you agree to abide by its terms.
 
+
+## Collaboration Retrospective and Norms
+### M3 Retrospective
+What worked
+- We continued to divide work into major and minor tasks, allowing each team member to take ownership of a core feature while contributing to smaller improvements
+- All team members contributed across both code and documentation, and most tasks were completed on time.
+- All PRs received at least one reviewer before merging.
+- We successfully integrated multiple components (map, bar charts, scatterplot, AI tab) into a dashboard.
+
+What didn't work
+- Some team members did much more coding than others and some did much more writing than others
+- Design documentation was not consistently updated alongside implementation, especially for major features like charts and filtering logic.
+- Communication gaps remained around task ownership and responsibilities (e.g., releases, submissions)
+- PR sizes remained large (e.g., 500–800+ LoC), making reviews difficult and reducing their effectiveness.
+
+### M4 Collaboration Norms
+For M4, we are committing to the following:
+- Smaller, more managable PRs
+- Stronger review practices. Every PR must have at least one meaningful review comment before merging. Wherever possible, the reviewer should be someone who did not implement the feature
+- Documentation-first approach. Update spec before writing code.
+- Include clear PR descriptions explaining what changed and why
+- Improved communication and coordination.  More frequent check=ins
+
+
 ## Attribution
 
 These contributing guidelines were adapted from the [dplyr contributing guidelines](https://github.com/tidyverse/dplyr/blob/master/.github/CONTRIBUTING.md).
