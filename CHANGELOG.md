@@ -5,6 +5,24 @@ All notable changes to the World Education Dashboard project will be documented 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0](https://github.com/UBC-MDS/DSCI-532_2026_15_WorldEducation/releases/tag/v0.4.0) - 2026-03-17
+
+### Added
+
+- Unit test and whole app test with `playwright` (`#72`)
+
+### Changed
+
+### Fixed
+
+### Known Issues
+
+### Reflections
+
+Testing
+
+Four tests were added. One unit test to  confirm that the dataframe operations need to achieve the correct data format for the bar chart that shows education level completion by gender is correctly done. This test is needed otherwise the displayed data may not be accurate. And three full app tests. 1) Test that the displayed dataframe has the correct size. This test is needed to ensure the loaded data is correct and therefore the data for all plots has the correct starting starting point. Without this test we can't be sure any of the displayed plots are correct. 2) Test that the regional filters are operating correctly. Without this a user may believe they are observing region specific data but actually are not. 3) Test the reset filter button. Without this test we can't be sure users are able to reset the dashboard. They may believe they are looking at unfiltered data but are not.
+
 ## [0.3.0](https://github.com/UBC-MDS/DSCI-532_2026_15_WorldEducation/releases/tag/v0.3.0) - 2026-03-08
 
 ### Added
