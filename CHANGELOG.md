@@ -11,13 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Unit test and whole app test with `playwright` (`#72`)
 - Interactive click has been implemented as the advanced feature. Users can click regions to deselect regions (`#77`)
-- Included the year of the data in the dashboard description. (`#77`)
+- Added a drop-down dashboard description in main page, and included the year of the data in the dashboard description. (`#68`,`#69`,`#77`)
 
 ### Changed
 - Dashboard theme (`#77`)
+- World map out of school metrics has reversed color representation, so positive meanings are in yellow (out of school metrics when low, other metrics when high), and negative meanings are in blue (out of school metrics when high, other metrics when low) (`#70`).
+- Scatter plot data points display size has increased. (`#70`).
+- Bar plots have vertical dash lines to separate categories for easier read. (`#69`).
+- Data table drop-down menu added metric grouping so viewers can select metrics in an organized way (`#70`).
 
 ### Fixed
-- "Select All" and "Reset" filters now have different functions. Reset is now set to no regions selected. (`#77`)
+- "Select All" and "Reset" filters now have different functions. Reset is now set to no regions selected. (`#68`,`#71`,`#77`)
 - **Feature prioritization issue link:** (`#63`).
 
 ### Known Issues
